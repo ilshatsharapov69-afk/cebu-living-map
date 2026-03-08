@@ -13,7 +13,7 @@
 
 <div id="sidebar">
     <h1>Philippines Living Map</h1>
-    <p style="font-size:10px;color:#666;text-align:center;">Сравнение мест для жизни по всем Филиппинам</p>
+    <p style="font-size:10px;color:#666;text-align:center;">Топ-200 мест для жизни на Филиппинах</p>
 
     <h2>POI слои (реальные данные OSM)</h2>
     <div id="poi-toggles" class="poi-toggles"></div>
@@ -28,16 +28,11 @@
 
     <div class="hazard-toggle locations-toggle">
         <input type="checkbox" id="show-locations" checked>
-        <span>📍 Показать районы</span>
+        <span>📍 Показать локации</span>
     </div>
 
     <div id="location-ui">
-    <h2>Оценка районов</h2>
-    <select id="rating-mode">
-        <option value="composite">Все факторы (composite)</option>
-    </select>
-
-    <h2>Веса факторов</h2>
+    <h2>Факторы оценки</h2>
     <div id="sliders" class="slider-group"></div>
     <button id="reset-btn">Сбросить</button>
 
@@ -46,7 +41,7 @@
         <div class="legend-labels"><span>Плохо</span><span>Средне</span><span>Отлично</span></div>
     </div>
 
-    <h2>Рейтинг районов</h2>
+    <h2>Рейтинг локаций</h2>
     <div id="rankings"></div>
     </div><!-- /location-ui -->
 </div>

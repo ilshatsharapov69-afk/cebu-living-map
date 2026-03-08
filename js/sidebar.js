@@ -56,53 +56,57 @@ MAP.renderHazardToggles = function() {
     }
 };
 
-MAP.renderRatingModeSelect = function() {
-    var select = document.getElementById('rating-mode');
-    var html = '<option value="composite">Все факторы (composite)</option>';
-    for (var i = 0; i < MAP.FACTORS.length; i++) {
-        var f = MAP.FACTORS[i];
-        html += '<option value="' + f.key + '">' + f.icon + ' ' + f.label + '</option>';
-    }
-    select.innerHTML = html;
-};
-
-MAP.switchRatingMode = function(mode) {
-    MAP.ratingMode = mode;
-    var items = document.querySelectorAll('.slider-item');
-    items.forEach(function(el) { el.classList.toggle('disabled', mode !== 'composite'); });
-    document.getElementById('reset-btn').style.opacity = mode !== 'composite' ? '0.3' : '1';
-    document.getElementById('reset-btn').style.pointerEvents = mode !== 'composite' ? 'none' : 'auto';
-    MAP.renderMarkers();
-    MAP.renderRankings();
-};
-
 MAP.renderSliders = function() {
     var container = document.getElementById('sliders');
     container.innerHTML = '';
     for (var i = 0; i < MAP.FACTORS.length; i++) {
         var f = MAP.FACTORS[i];
         var div = document.createElement('div');
-        div.className = 'slider-item' + (MAP.ratingMode !== 'composite' ? ' disabled' : '');
-        div.innerHTML = '<span class="icon">' + f.icon + '</span><label>' + f.label + '</label>' +
-            '<input type="range" min="0" max="5" value="' + MAP.currentWeights[f.key] + '">' +
-            '<span class="wv" id="wv-' + f.key + '">' + MAP.currentWeights[f.key] + '</span>';
-        div.querySelector('input').addEventListener('input', (function(fKey) {
+        div.className = 'slider-item';
+        div.innerHTML =
+            '<input type="checkbox" class="factor-check" data-key="' + f.key + '" ' +
+                (MAP.checkedFactors[f.key] ? 'checked' : '') + '>' +
+            '<span class="icon">' + f.icon + '</span>' +
+            '<label>' + f.label + '</label>' +
+            '<input type="range" min="0" max="10" value="' + MAP.filterThresholds[f.key] + '">' +
+            '<span class="wv" id="wv-' + f.key + '">' + MAP.filterThresholds[f.key] + '</span>';
+
+        // Checkbox handler — toggle factor in score calculation
+        div.querySelector('.factor-check').addEventListener('change', (function(fKey) {
             return function(e) {
-                MAP.currentWeights[fKey] = parseInt(e.target.value);
+                MAP.checkedFactors[fKey] = e.target.checked;
+                MAP.renderMarkers();
+                MAP.renderRankings();
+            };
+        })(f.key));
+
+        // Slider handler — set filter threshold
+        div.querySelector('input[type=range]').addEventListener('input', (function(fKey) {
+            return function(e) {
+                MAP.filterThresholds[fKey] = parseInt(e.target.value);
                 document.getElementById('wv-' + fKey).textContent = e.target.value;
                 MAP.renderMarkers();
                 MAP.renderRankings();
             };
         })(f.key));
+
         container.appendChild(div);
     }
 };
 
 MAP.renderRankings = function() {
     var container = document.getElementById('rankings');
-    var scored = MAP.LOCATIONS.map(function(loc) { return { loc: loc, score: MAP.getScore(loc) }; });
+    var scored = MAP.LOCATIONS
+        .filter(function(loc) { return MAP.passesFilter(loc); })
+        .map(function(loc) { return { loc: loc, score: MAP.getScore(loc) }; });
     scored.sort(function(a, b) { return b.score - a.score; });
     container.innerHTML = '';
+
+    if (scored.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#666;padding:20px;font-size:11px;">Нет подходящих локаций.<br>Уменьшите пороги фильтров.</div>';
+        return;
+    }
+
     scored.forEach(function(item, i) {
         var c = MAP.scoreToColor(item.score);
         var div = document.createElement('div');
@@ -120,7 +124,10 @@ MAP.renderRankings = function() {
 };
 
 MAP.resetWeights = function() {
-    MAP.FACTORS.forEach(function(f) { MAP.currentWeights[f.key] = f.defaultWeight; });
+    MAP.FACTORS.forEach(function(f) {
+        MAP.checkedFactors[f.key] = true;
+        MAP.filterThresholds[f.key] = 0;
+    });
     MAP.renderSliders();
     MAP.renderMarkers();
     MAP.renderRankings();
