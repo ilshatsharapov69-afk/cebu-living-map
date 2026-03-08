@@ -1,0 +1,134 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: #1a1a2e; color: #e0e0e0; }
+
+#sidebar {
+    width: 350px; min-width: 350px; height: 100vh; overflow-y: auto;
+    background: #16213e; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    z-index: 1000; transition: transform 0.3s ease;
+}
+#sidebar h1 { font-size: 18px; color: #e94560; text-align: center; }
+#sidebar h2 { font-size: 12px; color: #a0a0b0; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+
+/* Mode selector - checkboxes */
+.poi-toggles { display: flex; flex-direction: column; gap: 4px; }
+.poi-toggle {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+    padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s;
+}
+.poi-toggle:hover { background: rgba(255,255,255,0.06); }
+.poi-toggle input { accent-color: #e94560; }
+.poi-toggle .poi-color { width: 10px; height: 10px; border-radius: 50%; }
+.poi-toggle .poi-count { color: #666; font-size: 10px; margin-left: auto; }
+
+/* Rating mode */
+#rating-mode {
+    width: 100%; padding: 6px 8px; background: #1a1a2e; color: #e0e0e0;
+    border: 1px solid #333; border-radius: 6px; font-size: 12px;
+}
+#rating-mode:focus { border-color: #e94560; outline: none; }
+
+/* Sliders */
+.slider-group { display: flex; flex-direction: column; gap: 4px; }
+.slider-item {
+    display: flex; align-items: center; gap: 6px; font-size: 11px;
+    background: rgba(255,255,255,0.03); padding: 3px 8px; border-radius: 6px;
+    transition: opacity 0.2s;
+}
+.slider-item.disabled { opacity: 0.3; pointer-events: none; }
+.slider-item .icon { font-size: 14px; width: 20px; text-align: center; }
+.slider-item label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slider-item input[type=range] { width: 70px; accent-color: #e94560; }
+.slider-item .wv { width: 14px; text-align: center; font-weight: bold; color: #e94560; font-size: 11px; }
+
+#reset-btn {
+    background: #e94560; color: white; border: none; padding: 5px 10px;
+    border-radius: 6px; cursor: pointer; font-size: 11px; align-self: center;
+}
+#reset-btn:hover { background: #c73a52; }
+
+/* Legend */
+.legend-gradient {
+    height: 10px; border-radius: 5px; margin: 4px 0;
+    background: linear-gradient(to right, hsl(0,80%,45%), hsl(60,80%,45%), hsl(120,80%,45%));
+}
+.legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #666; }
+
+/* Loading */
+.poi-status { font-size: 10px; color: #666; text-align: center; }
+.poi-status.loading { color: #e94560; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+/* Rankings */
+#rankings { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.rank-item {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; font-size: 11px; transition: background 0.15s;
+}
+.rank-item:hover { background: rgba(255,255,255,0.08); }
+.rank-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.rank-name { flex: 1; }
+.rank-score { font-weight: bold; min-width: 28px; text-align: right; }
+.rank-num { color: #555; width: 16px; font-size: 10px; }
+
+#map { flex: 1; height: 100vh; }
+
+#toggle-sidebar {
+    display: none; position: fixed; bottom: 16px; left: 16px; z-index: 1001;
+    background: #e94560; color: white; border: none; width: 44px; height: 44px;
+    border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Popup */
+.loc-popup { font-family: -apple-system, sans-serif; min-width: 260px; }
+.loc-popup h3 { font-size: 14px; margin-bottom: 2px; color: #1a1a2e; }
+.loc-popup .score-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; color: white;
+    font-weight: bold; font-size: 12px; margin-bottom: 6px;
+}
+.bar-row { display: flex; align-items: center; gap: 3px; margin: 1px 0; font-size: 10px; }
+.bar-row.hl { background: #fff3cd; border-radius: 3px; padding: 1px 3px; }
+.bar-icon { width: 16px; text-align: center; }
+.bar-label { width: 100px; color: #555; }
+.bar-track { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; }
+.bar-val { width: 16px; text-align: right; font-weight: bold; color: #333; }
+.loc-meta { margin-top: 6px; font-size: 10px; color: #555; border-top: 1px solid #ddd; padding-top: 4px; }
+.loc-meta div { margin: 1px 0; }
+.loc-meta strong { color: #333; }
+
+/* Cluster overrides */
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: transparent !important; }
+.marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: transparent !important; }
+.poi-cluster-icon {
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: bold; font-size: 11px;
+    border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Hazard toggles */
+.hazard-toggles { display: flex; flex-direction: column; gap: 4px; }
+.hazard-toggle {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+    padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s;
+}
+.hazard-toggle:hover { background: rgba(255,255,255,0.06); }
+.hazard-toggle input { accent-color: #e94560; }
+.hazard-toggle .hazard-color { width: 10px; height: 10px; border-radius: 50%; }
+.hazard-toggle .hazard-count { color: #666; font-size: 10px; margin-left: auto; }
+.hazard-legend {
+    display: none; font-size: 10px; padding: 4px 8px; border-radius: 6px;
+    background: rgba(255,255,255,0.03); margin-top: 4px;
+}
+.hazard-legend.visible { display: flex; gap: 10px; justify-content: center; }
+.hazard-legend span { display: flex; align-items: center; gap: 3px; }
+.hazard-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+.locations-toggle { margin: 6px 0 2px; }
+
+@media (max-width: 768px) {
+    #sidebar { position: fixed; top: 0; left: 0; width: 300px; height: 100vh; transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #toggle-sidebar { display: block; }
+    #map { width: 100vw; }
+}
+#sidebar::-webkit-scrollbar, #rankings::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-thumb, #rankings::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
