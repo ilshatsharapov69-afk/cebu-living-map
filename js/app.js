@@ -38,4 +38,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('toggle-sidebar').addEventListener('click', function() {
         document.getElementById('sidebar').classList.toggle('open');
     });
+
+    // Dismiss seismic wave visualization on map click (only when not animating)
+    MAP.map.on('click', function() {
+        if (MAP._waveCleanup && !MAP._waveAnimating) {
+            MAP._waveCleanup();
+        }
+    });
 });

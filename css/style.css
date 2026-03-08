@@ -120,6 +120,74 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     background: rgba(255,255,255,0.03); margin-top: 4px;
 }
 .hazard-legend.visible { display: flex; gap: 10px; justify-content: center; }
+
+/* Earthquake wave animation */
+.eq-impact-label {
+    background: rgba(20, 20, 40, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    pointer-events: none;
+    animation: impact-appear 0.4s ease-out forwards;
+}
+.eq-impact-label.eq-impact-critical {
+    border: 2px solid #ff1744;
+    background: rgba(60, 0, 0, 0.95);
+    box-shadow: 0 0 20px rgba(255, 23, 68, 0.4), 0 2px 12px rgba(0,0,0,0.5);
+    animation: impact-appear 0.4s ease-out forwards, death-pulse 1.5s ease-in-out 0.4s infinite;
+}
+.eq-impact-label.eq-impact-severe {
+    border: 2px solid #ff6d00;
+    background: rgba(50, 30, 0, 0.95);
+    box-shadow: 0 0 14px rgba(255, 109, 0, 0.3), 0 2px 12px rgba(0,0,0,0.5);
+}
+@keyframes impact-appear {
+    0% { transform: scale(0.5) translateY(10px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes death-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 23, 68, 0.4); }
+    50% { box-shadow: 0 0 35px rgba(255, 23, 68, 0.7); }
+}
+.eq-impact-label .impact-mag {
+    font-weight: bold;
+    font-size: 14px;
+}
+.eq-impact-label .impact-deaths {
+    color: #e74c3c;
+    font-weight: bold;
+}
+.eq-impact-critical .impact-deaths {
+    font-size: 15px;
+    color: #ff1744;
+}
+/* Epicenter marker */
+.eq-epicenter-icon {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px; font-weight: bold;
+    animation: epicenter-glow 1.5s ease-in-out infinite alternate;
+}
+@keyframes epicenter-glow {
+    from { box-shadow: 0 0 10px rgba(255,255,255,0.3), 0 0 20px var(--eq-color, #e74c3c); }
+    to   { box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 40px var(--eq-color, #e74c3c); }
+}
+/* Wave legend */
+.wave-legend {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1500;
+    background: rgba(16, 21, 38, 0.92); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 10px 14px;
+    font-family: -apple-system, sans-serif; font-size: 11px; color: #ccc;
+    pointer-events: none;
+    animation: impact-appear 0.3s ease-out forwards;
+}
+.wave-legend div { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.wave-legend .wl-line { width: 20px; height: 3px; border-radius: 2px; }
 .hazard-legend span { display: flex; align-items: center; gap: 3px; }
 .hazard-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
 .locations-toggle { margin: 6px 0 2px; }
