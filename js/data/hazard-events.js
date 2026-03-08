@@ -117,6 +117,51 @@ MAP.TYPHOON_EVENTS = [
       {lat:8.23,lng:124.24,wind:85,label:'Iligan'},
     ]
   },
+  {
+    id: 'mangkhut-2018', name: 'Mangkhut / Ompong', date: '2018-09-15',
+    category: 5, maxWind: 285, deaths: 127,
+    info: 'Самый сильный тайфун 2018 года. Прямой удар по северному Лусону. Ветер 285 км/ч. Оползни в Кордильерах.',
+    track: [
+      {lat:18.25,lng:122.10,wind:285,label:'Baggao, Cagayan'},
+      {lat:17.80,lng:121.50,wind:260,label:'Tuguegarao'},
+      {lat:17.20,lng:120.80,wind:230,label:'Кордильеры'},
+      {lat:16.50,lng:120.20,wind:200,label:'Baguio area'},
+      {lat:16.00,lng:119.50,wind:180,label:'Выход в Южно-Китайское море'},
+    ]
+  },
+  {
+    id: 'vamco-2020', name: 'Vamco / Ulysses', date: '2020-11-11',
+    category: 3, maxWind: 220, deaths: 101,
+    info: 'Катастрофическое наводнение в Метро Маниле и долине Кагаян. Уровень воды как в 2009 (Ondoy).',
+    track: [
+      {lat:14.00,lng:124.00,wind:220,label:'Patnanungan, Quezon'},
+      {lat:14.50,lng:122.50,wind:200,label:'Пересечение Лусона'},
+      {lat:15.00,lng:121.00,wind:180,label:'Metro Manila'},
+      {lat:16.50,lng:120.50,wind:160,label:'Долина Кагаян'},
+    ]
+  },
+  {
+    id: 'goni-2020', name: 'Goni / Rolly', date: '2020-10-31',
+    category: 5, maxWind: 315, deaths: 32,
+    info: 'Самый сильный тайфун при выходе на сушу в 2020 году. 315 км/ч. Разрушил Катандуанес и Бикол.',
+    track: [
+      {lat:13.60,lng:124.20,wind:315,label:'Bato, Catanduanes'},
+      {lat:13.40,lng:123.70,wind:280,label:'Tiwi, Albay'},
+      {lat:13.20,lng:123.00,wind:230,label:'Ticao Pass'},
+      {lat:13.50,lng:121.50,wind:180,label:'Quezon Province'},
+    ]
+  },
+  {
+    id: 'ketsana-2009', name: 'Ketsana / Ondoy', date: '2009-09-26',
+    category: 1, maxWind: 100, deaths: 464,
+    info: '455мм осадков за 6 часов в Маниле. Худшее наводнение с 1967 года. 80% Метро Манилы затоплено.',
+    track: [
+      {lat:14.80,lng:122.50,wind:100,label:'Северо-восток Лусона'},
+      {lat:14.50,lng:121.50,wind:95,label:'Quezon Province'},
+      {lat:14.50,lng:121.00,wind:90,label:'Metro Manila (катастрофа)'},
+      {lat:14.50,lng:120.00,wind:80,label:'Zambales'},
+    ]
+  },
 ];
 
 MAP.FLOOD_EVENTS = [
@@ -132,6 +177,13 @@ MAP.FLOOD_EVENTS = [
   {id:'fl-10',name:'Паводки Себу',date:'2020-10-13',lat:10.3157,lng:123.8854,deaths:3,affected:2000,severity:5,cause:'Сильные дожди',info:'Внезапное наводнение застало жителей врасплох.'},
   {id:'fl-11',name:'Штормовой нагон Хайяна (Таклобан)',date:'2013-11-08',lat:11.2494,lng:124.9600,deaths:5000,affected:4100000,severity:10,cause:'Супертайфун Haiyan — нагон 5-7м',info:'Вода поднялась до 2-го этажа зданий. Большинство из 6300 погибших утонули.'},
   {id:'fl-12',name:'Тайфун Tino (Негрос)',date:'2025-11-04',lat:10.2000,lng:122.9600,deaths:62,affected:150000,severity:8,cause:'Тайфун Kalmaegi/Tino',info:'62 пропавших без вести. Провинция ещё не оправилась от землетрясения сентября 2025.'},
+  // Nationwide additions
+  {id:'fl-13',name:'Наводнение Ondoy (Манила)',date:'2009-09-26',lat:14.5547,lng:121.0244,deaths:464,affected:4900000,severity:10,cause:'ТШ Ketsana/Ondoy — 455мм за 6ч',info:'80% Метро Манилы затоплено. Marikina River поднялась на 8м. Худшее наводнение с 1967.'},
+  {id:'fl-14',name:'Наводнение Ulysses (Манила)',date:'2020-11-12',lat:14.5547,lng:121.0244,deaths:73,affected:3700000,severity:9,cause:'Тайфун Vamco/Ulysses',info:'Уровень воды в Marikina как при Ondoy. Долина Кагаян полностью затоплена.'},
+  {id:'fl-15',name:'Наводнение CDO (Sendong)',date:'2011-12-16',lat:8.4542,lng:124.6319,deaths:1292,affected:300000,severity:10,cause:'ТШ Washi/Sendong',info:'3.3м воды за час. Реки Cagayan de Oro вышли из берегов. Iliган тоже пострадал.'},
+  {id:'fl-16',name:'Habagat Manila 2012',date:'2012-08-07',lat:14.5547,lng:121.0244,deaths:95,affected:4400000,severity:9,cause:'Юго-западный муссон усиленный тайфуном',info:'Непрекращающиеся дожди в течение недели. Вся Метро Манила под водой.'},
+  {id:'fl-17',name:'Наводнение Давао 2024',date:'2024-06-15',lat:7.0707,lng:125.6087,deaths:5,affected:20000,severity:6,cause:'Муссонные дожди',info:'Река Davao вышла из берегов. Жители прибрежных баранgas эвакуированы.'},
+  {id:'fl-18',name:'Долина Кагаян 2020',date:'2020-11-14',lat:17.6132,lng:121.7270,deaths:35,affected:500000,severity:9,cause:'Тайфун Vamco + слив дамбы Magat',info:'Вся долина Кагаян затоплена. Вода до крыш. Спасение вертолётами.'},
 ];
 
 MAP.LANDSLIDE_EVENTS = [
@@ -144,9 +196,13 @@ MAP.LANDSLIDE_EVENTS = [
   {id:'ls-7',name:'Оползни тайфуна Haiyan (Лейте)',date:'2013-11-08',lat:11.00,lng:124.90,deaths:50,severity:8,cause:'Супертайфун Haiyan',info:'Горные общины отрезаны от помощи на дни.'},
   {id:'ls-8',name:'Оползни Негрос',date:'2026-02-02',lat:10.2000,lng:122.9600,deaths:1,severity:3,cause:'ТШ Penha/Basyang',info:'Паводки и оползни в Negros Occidental.'},
   {id:'ls-9',name:'Оползни Себу-Бохол',date:'2022-08-04',lat:10.30,lng:123.95,deaths:2,severity:4,cause:'Муссонные дожди',info:'10 случаев затоплений. 288 семей пострадали.'},
+  // Nationwide additions
+  {id:'ls-10',name:'Оползень Итогон (Benguet)',date:'2018-09-15',lat:16.3660,lng:120.6750,deaths:100,severity:10,cause:'Тайфун Mangkhut/Ompong + горная добыча',info:'Бывшая шахта обрушилась. 100+ горняков и их семей погибли. Бункхаус погребён.'},
+  {id:'ls-11',name:'Оползень Пантукан (Davao de Oro)',date:'2024-02-06',lat:7.6700,lng:126.0600,deaths:90,severity:9,cause:'Непрекращающиеся дожди + горная добыча',info:'Массивный оползень в золотодобывающем районе. Деревня Masara погребена.'},
 ];
 
 MAP.CRIME_EVENTS = [
+  // Cebu
   {id:'cr-1',type:'theft',name:'Карманные кражи Colon Street',lat:10.2950,lng:123.8990,period:'Постоянно',severity:8,info:'Старейшая улица Филиппин. Воры работают группами. 202 случая за янв-июн 2022. Опасно после темноты.'},
   {id:'cr-2',type:'theft',name:'Кражи Carbon Market',lat:10.2920,lng:123.8970,period:'Постоянно',severity:8,info:'Крупнейший рынок Себу. Толпы и узкие проходы — рай для карманников.'},
   {id:'cr-3',type:'drugs',name:'Mango Avenue — наркотики и грабежи',lat:10.3100,lng:123.8930,period:'Постоянно',severity:7,info:'Ночной район. Наркоторговля. Группы детей 7-14 лет обыскивают карманы. Риск после полуночи.'},
@@ -161,20 +217,42 @@ MAP.CRIME_EVENTS = [
   {id:'cr-12',type:'theft',name:'Fuente Osmeña Circle',lat:10.3080,lng:123.8910,period:'Постоянно',severity:6,info:'Площадь с бездомными. Мелкие кражи, особенно ночью. Рядом ночной район Mango Ave.'},
   {id:'cr-13',type:'scam',name:'Фейковые бронирования',lat:10.3157,lng:123.8854,period:'2023-2026',severity:5,info:'200+ задокументированных случаев с 2025. Фальшивые отели и туры.'},
   {id:'cr-14',type:'robbery',name:'Грабежи в прибрежных трущобах',lat:10.2900,lng:123.9050,period:'Постоянно',severity:7,info:'Переулки трущоб у побережья — высокий риск ограбления, особенно для иностранцев после темноты.'},
+  // Manila
+  {id:'cr-15',type:'theft',name:'Карманные кражи Tondo',lat:14.6042,lng:120.9679,period:'Постоянно',severity:9,info:'Один из самых плотно населённых районов мира. Высокий уровень уличной преступности.'},
+  {id:'cr-16',type:'theft',name:'Кражи Quiapo/Divisoria',lat:14.5988,lng:120.9840,period:'Постоянно',severity:8,info:'Крупнейшие рынки Манилы. Карманники в толпе. Особенно опасно в праздники.'},
+  {id:'cr-17',type:'scam',name:'Туристические мошенничества Ermita',lat:14.5678,lng:120.9851,period:'Постоянно',severity:7,info:'Фальшивые туры, завышенные цены, навязчивые зазывалы. Классический район для обмана туристов.'},
+  {id:'cr-18',type:'robbery',name:'Ограбления в Pasay/EDSA',lat:14.5378,lng:121.0014,period:'Постоянно',severity:7,info:'Район возле аэропорта. Грабежи в такси и у банкоматов.'},
+  {id:'cr-19',type:'scam',name:'POGO мошеннические центры',lat:14.5547,lng:121.0244,period:'2020-2024',severity:8,info:'Нелегальные онлайн-казино. Тысячи иностранцев удерживались насильно. Масштабный рейд 2024.'},
+  {id:'cr-20',type:'drugs',name:'Наркотрафик Metro Manila',lat:14.5547,lng:121.0244,period:'2016-2024',severity:8,info:'Война с наркотиками. Тысячи внесудебных расправ. Районы Tondo, Quezon City, Caloocan.'},
+  // Davao
+  {id:'cr-21',type:'robbery',name:'Безопасность Давао (строгий режим)',lat:7.0707,lng:125.6087,period:'Постоянно',severity:3,info:'Один из самых безопасных городов PH. Строгий комендантский час, запрет алкоголя после 01:00.'},
+  // Zamboanga / Mindanao
+  {id:'cr-22',type:'terrorism',name:'Осада Замбоанги 2013',lat:6.9214,lng:122.0790,period:'2013-09',severity:10,info:'MNLF захватили часть города. 20-дневная осада. 12 солдат, 107 повстанцев, 6 гражданских погибли.'},
+  {id:'cr-23',type:'terrorism',name:'Marawi 2017',lat:8.0000,lng:124.2883,period:'2017-05',severity:10,info:'ISIS-affiliated Maute Group захватили город. 5-месячная осада. 1000+ погибших, город разрушен.'},
+  {id:'cr-24',type:'robbery',name:'Криминал GenSan',lat:6.1164,lng:125.1716,period:'Постоянно',severity:5,info:'Порт, рыбный рынок. Мелкие кражи в районе порта, особенно ночью.'},
 ];
 
 MAP.HEALTH_EVENTS = [
-  {id:'hl-1',type:'dengue',name:'Эпидемия денге 2024',date:'2024',lat:10.3157,lng:123.8854,cases:15394,deaths:35,severity:8,info:'14 смертей в провинции Себу. Дети 5-10 лет — основная группа риска.'},
-  {id:'hl-2',type:'dengue',name:'Вспышка денге 2022',date:'2022',lat:10.3157,lng:123.8854,cases:11000,deaths:71,severity:9,info:'Провинция Себу: 4,263 случая, 26 смертей. Пик каждые 3 года.'},
-  {id:'hl-3',type:'dengue',name:'Денге 2025',date:'2025',lat:10.3157,lng:123.8854,cases:5880,deaths:10,severity:6,info:'Себу 2,936, Бохол 1,275, Себу Сити 999 случаев.'},
-  {id:'hl-4',type:'measles',name:'Вспышка кори 2019',date:'2019',lat:10.3157,lng:123.8854,cases:737,deaths:8,severity:7,info:'Рост 1,317%. Все 8 погибших — дети. Связано с вакцинофобией после скандала Dengvaxia.'},
+  // Cebu / Visayas
+  {id:'hl-1',type:'dengue',name:'Эпидемия денге 2024 (Себу)',date:'2024',lat:10.3157,lng:123.8854,cases:15394,deaths:35,severity:8,info:'14 смертей в провинции Себу. Дети 5-10 лет — основная группа риска.'},
+  {id:'hl-2',type:'dengue',name:'Вспышка денге 2022 (Себу)',date:'2022',lat:10.3157,lng:123.8854,cases:11000,deaths:71,severity:9,info:'Провинция Себу: 4,263 случая, 26 смертей. Пик каждые 3 года.'},
+  {id:'hl-3',type:'dengue',name:'Денге 2025 (Центр. Висайи)',date:'2025',lat:10.3157,lng:123.8854,cases:5880,deaths:10,severity:6,info:'Себу 2,936, Бохол 1,275, Себу Сити 999 случаев.'},
+  {id:'hl-4',type:'measles',name:'Вспышка кори 2019 (Себу)',date:'2019',lat:10.3157,lng:123.8854,cases:737,deaths:8,severity:7,info:'Рост 1,317%. Все 8 погибших — дети. Связано с вакцинофобией после скандала Dengvaxia.'},
   {id:'hl-5',type:'dengvaxia',name:'Скандал Dengvaxia',date:'2016-2017',lat:10.3157,lng:123.8854,cases:700000,deaths:10,severity:8,info:'Вакцина дана 700,000 детям. Может ухудшить денге у ранее не болевших. Доверие к вакцинам упало с 93% до 32%.'},
   {id:'hl-6',type:'COVID-19',name:'COVID-19 Себу 2020',date:'2020',lat:10.3157,lng:123.8854,cases:10820,deaths:690,severity:9,info:'Себу — лидер по COVID в Филиппинах. Смертность 6.38%. Месяцы карантина.'},
-  {id:'hl-7',type:'COVID-19',name:'COVID-19 2021-2023',date:'2021-2023',lat:10.3157,lng:123.8854,cases:210549,deaths:6685,severity:10,info:'Кумулятивно по Центральным Висайям. Волны Delta и Omicron.'},
+  {id:'hl-7',type:'COVID-19',name:'COVID-19 2021-2023 (Центр. Висайи)',date:'2021-2023',lat:10.3157,lng:123.8854,cases:210549,deaths:6685,severity:10,info:'Кумулятивно по Центральным Висайям. Волны Delta и Omicron.'},
   {id:'hl-8',type:'leptospirosis',name:'Лептоспироз после тайфуна Tino',date:'2025-11',lat:10.3157,lng:123.8854,cases:117,deaths:7,severity:7,info:'117 случаев за 20 дней после наводнения. Заражённая паводковая вода.'},
   {id:'hl-9',type:'leptospirosis',name:'Лептоспироз Себу 2025',date:'2025',lat:10.3157,lng:123.8854,cases:93,deaths:17,severity:6,info:'Годовой показатель. Месяцы дождей и паводков. Заражение через воду с отходами животных.'},
-  {id:'hl-10',type:'rabies',name:'Зона риска бешенства',date:'2023-2024',lat:10.3157,lng:123.8854,cases:55,deaths:55,severity:6,info:'Все 55 случаев в Филиппинах за 2023 — летальные. 71% от собак. 250-300 смертей/год по стране.'},
+  {id:'hl-10',type:'rabies',name:'Зона риска бешенства (вся PH)',date:'2023-2024',lat:10.3157,lng:123.8854,cases:55,deaths:55,severity:6,info:'Все 55 случаев в Филиппинах за 2023 — летальные. 71% от собак. 250-300 смертей/год по стране.'},
   {id:'hl-11',type:'food',name:'Отравление лечоном',date:'2022-05',lat:9.9300,lng:124.0100,cases:45,deaths:0,severity:3,info:'8+ случаев отравления испорченным лечоном (жареная свинья) в Центральных Висайях.'},
   {id:'hl-12',type:'food',name:'Отравление рыбой (общежитие)',date:'2023-06',lat:10.3000,lng:123.8900,cases:28,deaths:0,severity:3,info:'28 жителей общежития госпитализированы после испорченной рыбы.'},
-  {id:'hl-13',type:'cholera',name:'Эндемичная зона холеры',date:'2008-2024',lat:10.00,lng:124.00,cases:3756,deaths:19,severity:5,info:'Холера эндемична. 42,071 случаев за 2008-2013. Плохая санитария в зонах паводков.'},
+  {id:'hl-13',type:'cholera',name:'Эндемичная зона холеры (Висайи)',date:'2008-2024',lat:10.00,lng:124.00,cases:3756,deaths:19,severity:5,info:'Холера эндемична. 42,071 случаев за 2008-2013. Плохая санитария в зонах паводков.'},
+  // Manila / Luzon
+  {id:'hl-14',type:'dengue',name:'Эпидемия денге Манила 2019',date:'2019',lat:14.5547,lng:121.0244,cases:420000,deaths:1530,severity:10,info:'Национальная эпидемия. 420,000 случаев — рекорд. Metro Manila, Calabarzon, Central Luzon — лидеры.'},
+  {id:'hl-15',type:'COVID-19',name:'COVID-19 Metro Manila 2020-2022',date:'2020-2022',lat:14.5547,lng:121.0244,cases:1200000,deaths:25000,severity:10,info:'Metro Manila — эпицентр COVID в PH. Жёсткие карантины ECQ/MECQ. Экономика упала на 9.5%.'},
+  {id:'hl-16',type:'leptospirosis',name:'Лептоспироз Манила 2009',date:'2009-10',lat:14.5547,lng:121.0244,cases:3000,deaths:180,severity:9,info:'После наводнения Ondoy. Массовое заражение через паводковую воду. 180 погибших.'},
+  {id:'hl-17',type:'respiratory',name:'Загрязнение воздуха Taal 2020',date:'2020-01',lat:14.0113,lng:120.9980,cases:50000,deaths:0,severity:7,info:'Извержение вулкана Taal. Пепловое облако над Батангас и Metro Manila. 376,000 эвакуированы.'},
+  // Mindanao
+  {id:'hl-18',type:'dengue',name:'Эпидемия денге Давао 2019',date:'2019',lat:7.0707,lng:125.6087,cases:23000,deaths:98,severity:9,info:'Регион Давао — второй по числу случаев. Влажный климат и скопления воды.'},
+  {id:'hl-19',type:'cholera',name:'Холера Замбоанга',date:'2023',lat:6.9214,lng:122.0790,cases:150,deaths:3,severity:5,info:'Вспышка холеры в трущобах побережья. Проблемы с водоснабжением.'},
 ];

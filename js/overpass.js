@@ -1,5 +1,17 @@
 window.MAP = window.MAP || {};
 
+MAP.getViewportBBox = function() {
+    var b = MAP.map.getBounds();
+    return b.getSouth().toFixed(2) + ',' + b.getWest().toFixed(2) + ',' + b.getNorth().toFixed(2) + ',' + b.getEast().toFixed(2);
+};
+
+MAP.quantizeBBox = function() {
+    var b = MAP.map.getBounds();
+    // Round to 1 decimal for cache key stability
+    return Math.floor(b.getSouth()*10)/10 + ',' + Math.floor(b.getWest()*10)/10 + ',' +
+           Math.ceil(b.getNorth()*10)/10 + ',' + Math.ceil(b.getEast()*10)/10;
+};
+
 MAP.fetchPOICategory = async function(key) {
     var config = MAP.POI_CATEGORIES[key];
     if (config.static) {
@@ -7,8 +19,17 @@ MAP.fetchPOICategory = async function(key) {
         return config.points;
     }
 
+    // Check zoom level — don't fetch for too large area
+    if (MAP.map.getZoom() < MAP.MIN_POI_ZOOM) {
+        MAP.poiData[key] = config.staticFallback || [];
+        return MAP.poiData[key];
+    }
+
+    var bbox = MAP.getViewportBBox();
+    var quantized = MAP.quantizeBBox();
+
     // Check cache
-    var cacheKey = 'overpass_' + key;
+    var cacheKey = 'overpass_' + key + '_' + quantized;
     try {
         var cached = sessionStorage.getItem(cacheKey);
         if (cached) {
@@ -23,10 +44,11 @@ MAP.fetchPOICategory = async function(key) {
     // Fetch from Overpass
     var overpassData = [];
     try {
+        var query = config.buildQuery(bbox);
         var resp = await fetch(MAP.OVERPASS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'data=' + encodeURIComponent(config.query),
+            body: 'data=' + encodeURIComponent(query),
         });
         var json = await resp.json();
         overpassData = MAP.transformOverpass(json.elements || [], key);
@@ -49,9 +71,15 @@ MAP.mergeWithStatic = function(overpassData, staticData) {
     if (!staticData || staticData.length === 0) return overpassData;
     if (overpassData.length === 0) return staticData;
 
+    // Only include static points within the current viewport
+    var b = MAP.map.getBounds();
+    var visibleStatic = staticData.filter(function(sp) {
+        return b.contains([sp.lat, sp.lng]);
+    });
+
     var merged = overpassData.slice();
-    for (var i = 0; i < staticData.length; i++) {
-        var sp = staticData[i];
+    for (var i = 0; i < visibleStatic.length; i++) {
+        var sp = visibleStatic[i];
         var isDuplicate = overpassData.some(function(op) {
             var dlat = sp.lat - op.lat;
             var dlng = sp.lng - op.lng;
@@ -116,4 +144,18 @@ MAP.fetchAllPOIs = async function() {
     for (var i = 0; i < keys.length; i++) {
         if (MAP.poiVisible[keys[i]]) MAP.renderPOICluster(keys[i]);
     }
+};
+
+MAP.refreshVisiblePOIs = function() {
+    var keys = Object.keys(MAP.POI_CATEGORIES);
+    var hasVisible = keys.some(function(k) { return MAP.poiVisible[k] && !MAP.POI_CATEGORIES[k].static; });
+    if (!hasVisible) return;
+
+    MAP.fetchAllPOIs();
+};
+
+MAP._poiRefreshTimer = null;
+MAP.debouncedRefreshPOIs = function() {
+    clearTimeout(MAP._poiRefreshTimer);
+    MAP._poiRefreshTimer = setTimeout(MAP.refreshVisiblePOIs, 800);
 };

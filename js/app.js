@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('sidebar').classList.toggle('open');
     });
 
+    // Re-fetch POI layers when user pans/zooms to new area
+    MAP.map.on('moveend', MAP.debouncedRefreshPOIs);
+
     // Dismiss seismic wave visualization on map click (only when not animating)
     MAP.map.on('click', function() {
         if (MAP._waveCleanup && !MAP._waveAnimating) {

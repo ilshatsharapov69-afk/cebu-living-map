@@ -1,38 +1,44 @@
 window.MAP = window.MAP || {};
 
-MAP.BBOX = '9.0,123.0,11.5,124.6';
 MAP.OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 MAP.CACHE_TTL = 3600000; // 1 hour
+MAP.MIN_POI_ZOOM = 8; // don't fetch POIs below this zoom level
 
 MAP.KNOWN_BRANDS = ['sm', 'gaisano', 'robinsons', 'ayala', 'metro', 'savemore', 'puregold', 'mercury', '7-eleven', 'ministop', 'island city mall', 'alturas', 'bq mall', 'lee super plaza', 'citymall'];
-
-var BBOX = MAP.BBOX; // local alias for template literals below
 
 MAP.POI_CATEGORIES = {
     food: {
         label: 'Рынки / Еда',
         icon: '🥬',
         color: '#27ae60',
-        query: `[out:json][timeout:30];(node["amenity"="marketplace"](${BBOX});way["amenity"="marketplace"](${BBOX});node["shop"="supermarket"](${BBOX});way["shop"="supermarket"](${BBOX});node["shop"="greengrocer"](${BBOX});node["shop"="butcher"](${BBOX});node["shop"="seafood"](${BBOX}););out center body;`,
+        buildQuery: function(bbox) {
+            return '[out:json][timeout:30];(node["amenity"="marketplace"](' + bbox + ');way["amenity"="marketplace"](' + bbox + ');node["shop"="supermarket"](' + bbox + ');way["shop"="supermarket"](' + bbox + ');node["shop"="greengrocer"](' + bbox + ');node["shop"="butcher"](' + bbox + ');node["shop"="seafood"](' + bbox + '););out center body;';
+        },
     },
     shopsWalkable: {
         label: 'Моллы / Магазины',
         icon: '🏪',
         color: '#3498db',
-        query: `[out:json][timeout:30];(node["shop"="mall"](${BBOX});way["shop"="mall"](${BBOX});relation["shop"="mall"](${BBOX});node["shop"="department_store"](${BBOX});way["shop"="department_store"](${BBOX}););out center body;`,
+        buildQuery: function(bbox) {
+            return '[out:json][timeout:30];(node["shop"="mall"](' + bbox + ');way["shop"="mall"](' + bbox + ');relation["shop"="mall"](' + bbox + ');node["shop"="department_store"](' + bbox + ');way["shop"="department_store"](' + bbox + '););out center body;';
+        },
     },
     convenience: {
         label: 'Convenience stores',
         icon: '🏬',
         color: '#e67e22',
-        query: `[out:json][timeout:30];(node["shop"="convenience"](${BBOX}););out body;`,
+        buildQuery: function(bbox) {
+            return '[out:json][timeout:30];(node["shop"="convenience"](' + bbox + '););out body;';
+        },
         disableClusteringAtZoom: 16,
     },
     beach: {
         label: 'Пляжи',
         icon: '🏖️',
         color: '#f0c040',
-        query: `[out:json][timeout:30];(node["natural"="beach"](${BBOX});way["natural"="beach"](${BBOX});node["leisure"="beach_resort"](${BBOX});way["leisure"="beach_resort"](${BBOX}););out center body;`,
+        buildQuery: function(bbox) {
+            return '[out:json][timeout:30];(node["natural"="beach"](' + bbox + ');way["natural"="beach"](' + bbox + ');node["leisure"="beach_resort"](' + bbox + ');way["leisure"="beach_resort"](' + bbox + '););out center body;';
+        },
         staticFallback: [
             // Moalboal
             { name:'Panagsama Beach', lat:9.9340, lng:123.3870, importance:'large' },
@@ -80,6 +86,33 @@ MAP.POI_CATEGORIES = {
             { name:'Cordova Beach', lat:10.2600, lng:123.9580, importance:'medium' },
             // Liloan area
             { name:'Silot Bay Beach', lat:10.4010, lng:124.0050, importance:'small' },
+            // Boracay
+            { name:'White Beach Boracay', lat:11.9650, lng:121.9230, importance:'large' },
+            { name:'Bulabog Beach', lat:11.9670, lng:121.9310, importance:'large' },
+            { name:'Diniwid Beach', lat:11.9780, lng:121.9190, importance:'medium' },
+            { name:'Puka Shell Beach', lat:11.9830, lng:121.9250, importance:'large' },
+            // Palawan
+            { name:'Nacpan Beach El Nido', lat:11.2470, lng:119.4120, importance:'large' },
+            { name:'Las Cabanas Beach', lat:11.1560, lng:119.3750, importance:'large' },
+            { name:'Long Beach San Vicente', lat:10.5600, lng:119.2700, importance:'large' },
+            { name:'Honda Bay Beach', lat:9.8200, lng:118.7800, importance:'medium' },
+            { name:'Nagtabon Beach', lat:9.7900, lng:118.6800, importance:'medium' },
+            // Siargao
+            { name:'Cloud 9 Beach', lat:9.8200, lng:126.1200, importance:'large' },
+            { name:'General Luna Beach', lat:9.7900, lng:126.1100, importance:'large' },
+            { name:'Daku Island Beach', lat:9.8400, lng:126.0900, importance:'medium' },
+            // Camiguin
+            { name:'White Island Camiguin', lat:9.2200, lng:124.6500, importance:'large' },
+            { name:'Mantigue Island Beach', lat:9.1400, lng:124.8100, importance:'large' },
+            // La Union
+            { name:'San Juan Surf Beach', lat:16.6282, lng:120.3587, importance:'large' },
+            { name:'Urbiztondo Beach', lat:16.6300, lng:120.3560, importance:'medium' },
+            // Zambales/Subic
+            { name:'Crystal Beach Zambales', lat:15.1500, lng:119.9600, importance:'medium' },
+            { name:'Anawangin Cove', lat:14.8900, lng:120.1400, importance:'large' },
+            // Batangas
+            { name:'Laiya Beach', lat:13.6700, lng:121.3800, importance:'large' },
+            { name:'Nasugbu Beach', lat:14.0700, lng:120.6100, importance:'medium' },
         ],
     },
     immigration: {
@@ -88,11 +121,34 @@ MAP.POI_CATEGORIES = {
         color: '#8e44ad',
         static: true,
         points: [
+            // Cebu
             { name: 'BI Cebu Main (J Centre Mall)', lat: 10.3310, lng: 123.9060, importance: 'large' },
             { name: 'BI Cebu Pier', lat: 10.2970, lng: 123.9020, importance: 'large' },
+            // Bohol
             { name: 'BI Tagbilaran', lat: 9.6480, lng: 123.8540, importance: 'large' },
             { name: 'BI Panglao', lat: 9.5780, lng: 123.7750, importance: 'medium' },
+            // Negros
             { name: 'BI Dumaguete', lat: 9.3055, lng: 123.3040, importance: 'large' },
+            // Manila
+            { name: 'BI Manila Main Office', lat: 14.5896, lng: 120.9813, importance: 'large' },
+            { name: 'BI NAIA Terminal 1', lat: 14.5086, lng: 121.0197, importance: 'large' },
+            // Luzon
+            { name: 'BI Clark', lat: 15.1860, lng: 120.5470, importance: 'large' },
+            { name: 'BI Subic', lat: 14.8100, lng: 120.2830, importance: 'medium' },
+            { name: 'BI Legazpi', lat: 13.1400, lng: 123.7440, importance: 'medium' },
+            // Western Visayas
+            { name: 'BI Iloilo', lat: 10.6953, lng: 122.5646, importance: 'large' },
+            { name: 'BI Bacolod', lat: 10.6803, lng: 122.9568, importance: 'large' },
+            { name: 'BI Boracay (Caticlan)', lat: 11.9250, lng: 121.9530, importance: 'medium' },
+            // Eastern Visayas
+            { name: 'BI Tacloban', lat: 11.2500, lng: 124.9580, importance: 'large' },
+            // Palawan
+            { name: 'BI Puerto Princesa', lat: 9.7420, lng: 118.7360, importance: 'large' },
+            // Mindanao
+            { name: 'BI Davao', lat: 7.0648, lng: 125.6111, importance: 'large' },
+            { name: 'BI Cagayan de Oro', lat: 8.4789, lng: 124.6422, importance: 'large' },
+            { name: 'BI General Santos', lat: 6.1120, lng: 125.1720, importance: 'medium' },
+            { name: 'BI Zamboanga', lat: 6.9080, lng: 122.0710, importance: 'large' },
         ],
     },
     internet: {
@@ -101,6 +157,7 @@ MAP.POI_CATEGORIES = {
         color: '#00bcd4',
         static: true,
         points: [
+            // Cebu
             { name: 'PLDT/Converge Cebu Center', lat: 10.3100, lng: 123.8920, importance: 'large' },
             { name: 'IT Park Fiber Hub', lat: 10.3290, lng: 123.9050, importance: 'large' },
             { name: 'Lahug/Banilad Fiber', lat: 10.3400, lng: 123.8970, importance: 'medium' },
@@ -109,10 +166,32 @@ MAP.POI_CATEGORIES = {
             { name: 'Liloan Fiber', lat: 10.3980, lng: 123.9930, importance: 'medium' },
             { name: 'Talisay Fiber', lat: 10.2450, lng: 123.8480, importance: 'medium' },
             { name: 'Minglanilla Fiber', lat: 10.2430, lng: 123.7940, importance: 'small' },
+            // Bohol
             { name: 'PLDT Tagbilaran', lat: 9.6490, lng: 123.8530, importance: 'large' },
             { name: 'Converge Tagbilaran', lat: 9.6510, lng: 123.8560, importance: 'medium' },
+            // Negros
             { name: 'PLDT Dumaguete', lat: 9.3060, lng: 123.3050, importance: 'large' },
             { name: 'Converge Dumaguete', lat: 9.3080, lng: 123.3070, importance: 'medium' },
+            // Metro Manila
+            { name: 'Makati Fiber Hub', lat: 14.5547, lng: 121.0244, importance: 'large' },
+            { name: 'BGC Fiber Hub', lat: 14.5515, lng: 121.0509, importance: 'large' },
+            { name: 'Quezon City Fiber', lat: 14.6760, lng: 121.0437, importance: 'large' },
+            { name: 'Ortigas Fiber Hub', lat: 14.5764, lng: 121.0851, importance: 'large' },
+            { name: 'Alabang Fiber', lat: 14.4231, lng: 121.0397, importance: 'medium' },
+            // Luzon
+            { name: 'Clark Fiber Hub', lat: 15.1852, lng: 120.5464, importance: 'large' },
+            { name: 'Baguio Fiber', lat: 16.4023, lng: 120.5960, importance: 'medium' },
+            { name: 'Legazpi Fiber', lat: 13.1391, lng: 123.7438, importance: 'medium' },
+            // Western Visayas
+            { name: 'Iloilo Fiber Hub', lat: 10.6918, lng: 122.5621, importance: 'large' },
+            { name: 'Bacolod Fiber', lat: 10.6840, lng: 122.9563, importance: 'large' },
+            // Mindanao
+            { name: 'Davao Fiber Hub', lat: 7.0707, lng: 125.6087, importance: 'large' },
+            { name: 'CDO Fiber Hub', lat: 8.4542, lng: 124.6319, importance: 'large' },
+            // Palawan
+            { name: 'Puerto Princesa Fiber', lat: 9.7392, lng: 118.7353, importance: 'medium' },
+            // Eastern Visayas
+            { name: 'Tacloban Fiber', lat: 11.2494, lng: 124.9600, importance: 'medium' },
         ],
     },
 };
