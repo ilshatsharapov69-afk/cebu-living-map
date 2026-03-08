@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cebu Region Living Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: #1a1a2e; color: #e0e0e0; }
+
+        #sidebar {
+            width: 350px; min-width: 350px; height: 100vh; overflow-y: auto;
+            background: #16213e; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+            z-index: 1000; transition: transform 0.3s ease;
+        }
+        #sidebar h1 { font-size: 18px; color: #e94560; text-align: center; }
+        #sidebar h2 { font-size: 12px; color: #a0a0b0; text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+
+        /* Mode selector - checkboxes */
+        .poi-toggles { display: flex; flex-direction: column; gap: 4px; }
+        .poi-toggle {
+            display: flex; align-items: center; gap: 8px; font-size: 12px;
+            padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s;
+        }
+        .poi-toggle:hover { background: rgba(255,255,255,0.06); }
+        .poi-toggle input { accent-color: #e94560; }
+        .poi-toggle .poi-color { width: 10px; height: 10px; border-radius: 50%; }
+        .poi-toggle .poi-count { color: #666; font-size: 10px; margin-left: auto; }
+
+        /* Rating mode */
+        #rating-mode {
+            width: 100%; padding: 6px 8px; background: #1a1a2e; color: #e0e0e0;
+            border: 1px solid #333; border-radius: 6px; font-size: 12px;
+        }
+        #rating-mode:focus { border-color: #e94560; outline: none; }
+
+        /* Sliders */
+        .slider-group { display: flex; flex-direction: column; gap: 4px; }
+        .slider-item {
+            display: flex; align-items: center; gap: 6px; font-size: 11px;
+            background: rgba(255,255,255,0.03); padding: 3px 8px; border-radius: 6px;
+            transition: opacity 0.2s;
+        }
+        .slider-item.disabled { opacity: 0.3; pointer-events: none; }
+        .slider-item .icon { font-size: 14px; width: 20px; text-align: center; }
+        .slider-item label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .slider-item input[type=range] { width: 70px; accent-color: #e94560; }
+        .slider-item .wv { width: 14px; text-align: center; font-weight: bold; color: #e94560; font-size: 11px; }
+
+        #reset-btn {
+            background: #e94560; color: white; border: none; padding: 5px 10px;
+            border-radius: 6px; cursor: pointer; font-size: 11px; align-self: center;
+        }
+        #reset-btn:hover { background: #c73a52; }
+
+        /* Legend */
+        .legend-gradient {
+            height: 10px; border-radius: 5px; margin: 4px 0;
+            background: linear-gradient(to right, hsl(0,80%,45%), hsl(60,80%,45%), hsl(120,80%,45%));
+        }
+        .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #666; }
+
+        /* Loading */
+        .poi-status { font-size: 10px; color: #666; text-align: center; }
+        .poi-status.loading { color: #e94560; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+        /* Rankings */
+        #rankings { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+        .rank-item {
+            display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+            border-radius: 6px; cursor: pointer; font-size: 11px; transition: background 0.15s;
+        }
+        .rank-item:hover { background: rgba(255,255,255,0.08); }
+        .rank-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .rank-name { flex: 1; }
+        .rank-score { font-weight: bold; min-width: 28px; text-align: right; }
+        .rank-num { color: #555; width: 16px; font-size: 10px; }
+
+        #map { flex: 1; height: 100vh; }
+
+        #toggle-sidebar {
+            display: none; position: fixed; bottom: 16px; left: 16px; z-index: 1001;
+            background: #e94560; color: white; border: none; width: 44px; height: 44px;
+            border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Popup */
+        .loc-popup { font-family: -apple-system, sans-serif; min-width: 260px; }
+        .loc-popup h3 { font-size: 14px; margin-bottom: 2px; color: #1a1a2e; }
+        .loc-popup .score-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px; color: white;
+            font-weight: bold; font-size: 12px; margin-bottom: 6px;
+        }
+        .bar-row { display: flex; align-items: center; gap: 3px; margin: 1px 0; font-size: 10px; }
+        .bar-row.hl { background: #fff3cd; border-radius: 3px; padding: 1px 3px; }
+        .bar-icon { width: 16px; text-align: center; }
+        .bar-label { width: 100px; color: #555; }
+        .bar-track { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; }
+        .bar-val { width: 16px; text-align: right; font-weight: bold; color: #333; }
+        .loc-meta { margin-top: 6px; font-size: 10px; color: #555; border-top: 1px solid #ddd; padding-top: 4px; }
+        .loc-meta div { margin: 1px 0; }
+        .loc-meta strong { color: #333; }
+
+        /* Cluster overrides */
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: transparent !important; }
+        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: transparent !important; }
+        .poi-cluster-icon {
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 11px;
+            border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+
+        /* Hazard toggles */
+        .hazard-toggles { display: flex; flex-direction: column; gap: 4px; }
+        .hazard-toggle {
+            display: flex; align-items: center; gap: 8px; font-size: 12px;
+            padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s;
+        }
+        .hazard-toggle:hover { background: rgba(255,255,255,0.06); }
+        .hazard-toggle input { accent-color: #e94560; }
+        .hazard-toggle .hazard-color { width: 10px; height: 10px; border-radius: 50%; }
+        .hazard-toggle .hazard-count { color: #666; font-size: 10px; margin-left: auto; }
+        .hazard-legend {
+            display: none; font-size: 10px; padding: 4px 8px; border-radius: 6px;
+            background: rgba(255,255,255,0.03); margin-top: 4px;
+        }
+        .hazard-legend.visible { display: flex; gap: 10px; justify-content: center; }
+        .hazard-legend span { display: flex; align-items: center; gap: 3px; }
+        .hazard-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .locations-toggle { margin: 6px 0 2px; }
+
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; top: 0; left: 0; width: 300px; height: 100vh; transform: translateX(-100%); }
+            #sidebar.open { transform: translateX(0); }
+            #toggle-sidebar { display: block; }
+            #map { width: 100vw; }
+        }
+        #sidebar::-webkit-scrollbar, #rankings::-webkit-scrollbar { width: 4px; }
+        #sidebar::-webkit-scrollbar-thumb, #rankings::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h1>Cebu Living Map</h1>
+    <p style="font-size:10px;color:#666;text-align:center;">Сравнение мест для жизни (~200км от Себу)</p>
+
+    <h2>POI слои (реальные данные OSM)</h2>
+    <div id="poi-toggles" class="poi-toggles"></div>
+    <div id="poi-status" class="poi-status"></div>
+
+    <h2>Безопасность (слои)</h2>
+    <div id="hazard-toggles" class="hazard-toggles"></div>
+    <div id="hazard-legend" class="hazard-legend">
+        <span style="font-size:9px;color:#888;">Точки = реальные инциденты | Heatmap = плотность</span>
+    </div>
+    <div id="hazard-status" class="poi-status"></div>
+
+    <div class="hazard-toggle locations-toggle">
+        <input type="checkbox" id="show-locations" checked onchange="toggleLocations(this.checked)">
+        <span>📍 Показать районы</span>
+    </div>
+
+    <div id="location-ui">
+    <h2>Оценка районов</h2>
+    <select id="rating-mode" onchange="switchRatingMode(this.value)">
+        <option value="composite">Все факторы (composite)</option>
+    </select>
+
+    <h2>Веса факторов</h2>
+    <div id="sliders" class="slider-group"></div>
+    <button id="reset-btn" onclick="resetWeights()">Сбросить</button>
+
+    <div style="text-align:center">
+        <div class="legend-gradient"></div>
+        <div class="legend-labels"><span>Плохо</span><span>Средне</span><span>Отлично</span></div>
+    </div>
+
+    <h2>Рейтинг районов</h2>
+    <div id="rankings"></div>
+    </div><!-- /location-ui -->
+</div>
+
+<div id="map"></div>
+<button id="toggle-sidebar" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+// ===================== FACTORS & LOCATIONS =====================
+
+const FACTORS = [
+    { key: 'costOfLiving',   label: 'Стоимость жизни',    icon: '💰', defaultWeight: 3 },
+    { key: 'internet',       label: 'Интернет',           icon: '📶', defaultWeight: 3 },
+    { key: 'food',           label: 'Свежая еда',         icon: '🥬', defaultWeight: 3 },
+    { key: 'walkability',    label: 'Прогулки/природа',   icon: '🚶', defaultWeight: 3 },
+    { key: 'quiet',          label: 'Тишина',             icon: '🤫', defaultWeight: 3 },
+    { key: 'shopsWalkable',  label: 'Магазины рядом',     icon: '🏪', defaultWeight: 3 },
+    { key: 'beach',          label: 'Пляж',               icon: '🏖️', defaultWeight: 2 },
+    { key: 'safety',         label: 'Безопасность',       icon: '🛡️', defaultWeight: 2 },
+    { key: 'airQuality',     label: 'Воздух',             icon: '🌬️', defaultWeight: 2 },
+    { key: 'immigration',    label: 'Иммиграционка (BI)', icon: '🏛️', defaultWeight: 1 },
+    { key: 'expatCommunity', label: 'Экспаты',            icon: '👥', defaultWeight: 1 },
+];
+
+const LOCATIONS = [
+    // hazards: earthquake(seis), typhoon, flood, landslide, crime, health — risk 1-10 (10=worst)
+    { id:'it-park', name:'IT Park, Cebu', region:'Cebu City', lat:10.3291, lng:123.9056,
+      ratings:{costOfLiving:4,internet:9,food:6,walkability:5,quiet:2,shopsWalkable:9,beach:2,safety:8,airQuality:4,immigration:8,expatCommunity:7},
+      hazards:{earthquake:6,typhoon:5,flood:7,landslide:1,crime:4,health:6},
+      meta:{rent:'20,000-35,000 PHP',internet:'PLDT Fiber, Converge, Globe — 100-300Mbps',bi:'BI Cebu Main (J Centre Mall)',ferry:'N/A',notes:'Шумно и дорого. Твоя текущая локация.'} },
+    { id:'lahug', name:'Lahug, Cebu', region:'Cebu City', lat:10.3350, lng:123.8930,
+      ratings:{costOfLiving:5,internet:9,food:7,walkability:6,quiet:4,shopsWalkable:8,beach:2,safety:7,airQuality:5,immigration:8,expatCommunity:6},
+      hazards:{earthquake:6,typhoon:5,flood:4,landslide:4,crime:5,health:6},
+      meta:{rent:'12,000-25,000 PHP',internet:'Fiber 50-200Mbps',bi:'BI Cebu (15 мин)',ferry:'N/A',notes:'Тише IT Park, холмы для прогулок.'} },
+    { id:'banilad', name:'Banilad, Cebu', region:'Cebu City', lat:10.3430, lng:123.9010,
+      ratings:{costOfLiving:5,internet:9,food:7,walkability:5,quiet:5,shopsWalkable:8,beach:2,safety:7,airQuality:5,immigration:8,expatCommunity:6},
+      hazards:{earthquake:6,typhoon:5,flood:4,landslide:2,crime:4,health:5},
+      meta:{rent:'12,000-22,000 PHP',internet:'Fiber 50-200Mbps',bi:'BI Cebu (15 мин)',ferry:'N/A',notes:'Banilad Town Centre, Gaisano Country Mall.'} },
+    { id:'talamban', name:'Talamban, Cebu', region:'Cebu City', lat:10.3600, lng:123.9100,
+      ratings:{costOfLiving:6,internet:8,food:6,walkability:5,quiet:6,shopsWalkable:6,beach:2,safety:7,airQuality:6,immigration:7,expatCommunity:4},
+      hazards:{earthquake:6,typhoon:5,flood:3,landslide:5,crime:3,health:5},
+      meta:{rent:'8,000-15,000 PHP',internet:'PLDT/Converge',bi:'BI Cebu (25 мин)',ferry:'N/A',notes:'Тихий, зелёный, далековато от центра.'} },
+    { id:'guadalupe', name:'Guadalupe, Cebu', region:'Cebu City', lat:10.3170, lng:123.8890,
+      ratings:{costOfLiving:6,internet:8,food:7,walkability:4,quiet:4,shopsWalkable:7,beach:2,safety:6,airQuality:4,immigration:8,expatCommunity:3},
+      hazards:{earthquake:6,typhoon:5,flood:8,landslide:3,crime:7,health:7},
+      meta:{rent:'8,000-15,000 PHP',internet:'Fiber',bi:'BI Cebu (10 мин)',ferry:'N/A',notes:'Рынок Guadalupe, шумновато.'} },
+    { id:'liloan', name:'Liloan', region:'Cebu Province', lat:10.3990, lng:123.9960,
+      ratings:{costOfLiving:8,internet:8,food:6,walkability:5,quiet:7,shopsWalkable:6,beach:3,safety:7,airQuality:7,immigration:6,expatCommunity:3},
+      hazards:{earthquake:5,typhoon:6,flood:5,landslide:2,crime:3,health:4},
+      meta:{rent:'6,000-12,000 PHP',internet:'Converge/PLDT Fiber',bi:'BI Cebu (30-40 мин)',ferry:'N/A',notes:'Тихий пригород, растущая инфра.'} },
+    { id:'consolacion', name:'Consolacion', region:'Cebu Province', lat:10.3770, lng:123.9620,
+      ratings:{costOfLiving:8,internet:8,food:6,walkability:4,quiet:7,shopsWalkable:7,beach:2,safety:7,airQuality:7,immigration:7,expatCommunity:3},
+      hazards:{earthquake:5,typhoon:6,flood:4,landslide:3,crime:3,health:4},
+      meta:{rent:'6,000-12,000 PHP',internet:'Fiber',bi:'BI Cebu (20-30 мин)',ferry:'N/A',notes:'SM, Gaisano рядом.'} },
+    { id:'talisay', name:'Talisay', region:'Cebu Province', lat:10.2440, lng:123.8490,
+      ratings:{costOfLiving:7,internet:8,food:7,walkability:5,quiet:5,shopsWalkable:7,beach:3,safety:6,airQuality:5,immigration:8,expatCommunity:3},
+      hazards:{earthquake:6,typhoon:5,flood:6,landslide:2,crime:5,health:5},
+      meta:{rent:'7,000-14,000 PHP',internet:'Fiber',bi:'BI Cebu (15-20 мин)',ferry:'N/A',notes:'Пригород Себу, есть рынки.'} },
+    { id:'minglanilla', name:'Minglanilla', region:'Cebu Province', lat:10.2440, lng:123.7960,
+      ratings:{costOfLiving:7,internet:7,food:6,walkability:4,quiet:6,shopsWalkable:6,beach:3,safety:7,airQuality:6,immigration:7,expatCommunity:2},
+      hazards:{earthquake:6,typhoon:5,flood:4,landslide:4,crime:3,health:4},
+      meta:{rent:'5,000-12,000 PHP',internet:'PLDT/Converge',bi:'BI Cebu (25 мин)',ferry:'N/A',notes:'Тихий пригород на юге.'} },
+    { id:'naga', name:'Naga, Cebu', region:'Cebu Province', lat:10.2090, lng:123.7590,
+      ratings:{costOfLiving:8,internet:6,food:6,walkability:5,quiet:7,shopsWalkable:5,beach:3,safety:7,airQuality:7,immigration:6,expatCommunity:2},
+      hazards:{earthquake:6,typhoon:5,flood:3,landslide:9,crime:3,health:4},
+      meta:{rent:'4,000-10,000 PHP',internet:'DSL/LTE, Fiber растёт',bi:'BI Cebu (35 мин)',ferry:'N/A',notes:'Маленький город, рынок ограничен.'} },
+    { id:'carcar', name:'Carcar', region:'Cebu Province', lat:10.1060, lng:123.6400,
+      ratings:{costOfLiving:8,internet:6,food:7,walkability:5,quiet:7,shopsWalkable:5,beach:3,safety:7,airQuality:7,immigration:5,expatCommunity:2},
+      hazards:{earthquake:6,typhoon:5,flood:4,landslide:5,crime:3,health:4},
+      meta:{rent:'4,000-10,000 PHP',internet:'DSL/LTE',bi:'BI Cebu (1 час)',ferry:'N/A',notes:'Lechon и chicharon, хороший рынок.'} },
+    { id:'argao', name:'Argao', region:'Cebu Province', lat:9.8820, lng:123.6100,
+      ratings:{costOfLiving:9,internet:4,food:6,walkability:6,quiet:8,shopsWalkable:3,beach:6,safety:8,airQuality:9,immigration:4,expatCommunity:2},
+      hazards:{earthquake:5,typhoon:6,flood:3,landslide:6,crime:2,health:3},
+      meta:{rent:'3,000-8,000 PHP',internet:'LTE/DSL',bi:'BI Cebu (2 часа)',ferry:'N/A',notes:'Тихий городок, пляж рядом, но слабый интернет.'} },
+    { id:'moalboal', name:'Moalboal', region:'Cebu Province', lat:9.9390, lng:123.3980,
+      ratings:{costOfLiving:5,internet:6,food:5,walkability:4,quiet:7,shopsWalkable:4,beach:9,safety:7,airQuality:9,immigration:4,expatCommunity:7},
+      hazards:{earthquake:5,typhoon:5,flood:2,landslide:4,crime:2,health:3},
+      meta:{rent:'12,000-20,000 PHP',internet:'Globe/PLDT 20-50Mbps',bi:'BI Cebu (3 часа)',ferry:'Автобус ~3ч',notes:'Пляжи, дайвинг. Дорого и без байка неудобно.'} },
+    { id:'oslob', name:'Oslob', region:'Cebu Province', lat:9.4680, lng:123.4380,
+      ratings:{costOfLiving:9,internet:4,food:5,walkability:5,quiet:8,shopsWalkable:3,beach:7,safety:7,airQuality:9,immigration:3,expatCommunity:3},
+      hazards:{earthquake:5,typhoon:6,flood:2,landslide:5,crime:2,health:3},
+      meta:{rent:'3,000-8,000 PHP',internet:'LTE',bi:'BI Cebu (4ч) / Dumaguete BI',ferry:'Паром Dumaguete',notes:'Дёшево, красиво, но далеко и слабый интернет.'} },
+    { id:'toledo', name:'Toledo', region:'Cebu Province', lat:10.3770, lng:123.6380,
+      ratings:{costOfLiving:8,internet:6,food:6,walkability:4,quiet:6,shopsWalkable:5,beach:4,safety:6,airQuality:7,immigration:5,expatCommunity:2},
+      hazards:{earthquake:6,typhoon:5,flood:3,landslide:7,crime:4,health:4},
+      meta:{rent:'4,000-10,000 PHP',internet:'DSL/LTE',bi:'BI Cebu (1.5ч)',ferry:'Паром San Carlos',notes:'Порт на западе Себу.'} },
+    { id:'balamban', name:'Balamban', region:'Cebu Province', lat:10.5000, lng:123.7200,
+      ratings:{costOfLiving:8,internet:5,food:5,walkability:5,quiet:8,shopsWalkable:3,beach:4,safety:7,airQuality:8,immigration:4,expatCommunity:1},
+      hazards:{earthquake:5,typhoon:5,flood:2,landslide:7,crime:2,health:3},
+      meta:{rent:'3,000-8,000 PHP',internet:'LTE',bi:'BI Cebu (1.5ч)',ferry:'N/A',notes:'Тихо, горы, но мало магазинов.'} },
+    { id:'bantayan', name:'Bantayan Island', region:'Cebu Islands', lat:11.1680, lng:123.7270,
+      ratings:{costOfLiving:7,internet:4,food:6,walkability:5,quiet:8,shopsWalkable:4,beach:9,safety:8,airQuality:9,immigration:3,expatCommunity:4},
+      hazards:{earthquake:4,typhoon:9,flood:7,landslide:1,crime:2,health:4},
+      meta:{rent:'5,000-12,000 PHP',internet:'LTE/Starlink',bi:'BI Cebu (4-5ч)',ferry:'Hagnaya-Santa Fe ~1ч',notes:'Белые пляжи, слабый интернет.'} },
+    { id:'malapascua', name:'Malapascua Island', region:'Cebu Islands', lat:11.3280, lng:124.1130,
+      ratings:{costOfLiving:6,internet:1,food:4,walkability:6,quiet:8,shopsWalkable:2,beach:9,safety:7,airQuality:9,immigration:2,expatCommunity:5},
+      hazards:{earthquake:4,typhoon:9,flood:6,landslide:1,crime:2,health:5},
+      meta:{rent:'8,000-15,000 PHP',internet:'30GB/день лимит!',bi:'BI Cebu (очень далеко)',ferry:'Maya + лодка',notes:'30GB daily cap — невозможно работать.'} },
+    { id:'camotes', name:'Camotes Islands', region:'Cebu Islands', lat:10.6730, lng:124.3680,
+      ratings:{costOfLiving:8,internet:2,food:5,walkability:5,quiet:9,shopsWalkable:2,beach:8,safety:8,airQuality:9,immigration:2,expatCommunity:2},
+      hazards:{earthquake:4,typhoon:8,flood:5,landslide:2,crime:1,health:4},
+      meta:{rent:'3,000-8,000 PHP',internet:'LTE слабый',bi:'BI Cebu (паром 2-3ч)',ferry:'Danao port ~2-3ч',notes:'Нетронутая природа, слишком неразвита.'} },
+    { id:'tagbilaran', name:'Tagbilaran, Bohol', region:'Bohol', lat:9.6500, lng:123.8530,
+      ratings:{costOfLiving:8,internet:7,food:7,walkability:7,quiet:6,shopsWalkable:7,beach:4,safety:8,airQuality:8,immigration:9,expatCommunity:5},
+      hazards:{earthquake:8,typhoon:6,flood:5,landslide:2,crime:3,health:5},
+      meta:{rent:'6,000-12,000 PHP',internet:'PLDT Fiber, Converge 30-100Mbps',bi:'BI Tagbilaran + BI Panglao (два офиса!)',ferry:'OceanJet 1.5-2ч, от 723 PHP',notes:'Второй лучший вариант. Пешеходный, рынки, BI рядом.'} },
+    { id:'panglao', name:'Panglao, Bohol', region:'Bohol', lat:9.5750, lng:123.7740,
+      ratings:{costOfLiving:6,internet:7,food:6,walkability:5,quiet:7,shopsWalkable:5,beach:9,safety:8,airQuality:9,immigration:8,expatCommunity:6},
+      hazards:{earthquake:8,typhoon:6,flood:4,landslide:1,crime:2,health:4},
+      meta:{rent:'12,000-25,000 PHP',internet:'Fiber в развитых зонах',bi:'BI Panglao',ferry:'Через Tagbilaran +20 мин',notes:'Пляжи, но дорого. Без байка неудобно.'} },
+    { id:'anda-bohol', name:'Anda, Bohol', region:'Bohol', lat:9.7370, lng:124.2790,
+      ratings:{costOfLiving:8,internet:4,food:5,walkability:6,quiet:9,shopsWalkable:3,beach:8,safety:8,airQuality:9,immigration:6,expatCommunity:2},
+      hazards:{earthquake:8,typhoon:6,flood:3,landslide:4,crime:1,health:3},
+      meta:{rent:'4,000-10,000 PHP',internet:'LTE',bi:'BI Tagbilaran (2ч)',ferry:'Через Tagbilaran',notes:'Тихие пляжи, мало туристов, слабый интернет.'} },
+    { id:'loboc', name:'Loboc, Bohol', region:'Bohol', lat:9.6340, lng:124.0260,
+      ratings:{costOfLiving:8,internet:5,food:5,walkability:7,quiet:9,shopsWalkable:3,beach:2,safety:8,airQuality:9,immigration:7,expatCommunity:3},
+      hazards:{earthquake:8,typhoon:5,flood:7,landslide:5,crime:1,health:3},
+      meta:{rent:'4,000-10,000 PHP',internet:'DSL/LTE',bi:'BI Tagbilaran (30 мин)',ferry:'Через Tagbilaran',notes:'Река, природа, тишина. Нет пляжей.'} },
+    { id:'dumaguete', name:'Dumaguete', region:'Negros Oriental', lat:9.3068, lng:123.3054,
+      ratings:{costOfLiving:9,internet:8,food:9,walkability:8,quiet:7,shopsWalkable:8,beach:6,safety:8,airQuality:8,immigration:9,expatCommunity:9},
+      hazards:{earthquake:5,typhoon:4,flood:4,landslide:3,crime:3,health:4},
+      meta:{rent:'6,000-12,000 PHP',internet:'PLDT Fiber, Converge 50-100Mbps',bi:'BI Dumaguete (в городе!)',ferry:'Паром из Себу 4-6ч / самолёт',notes:'ЛУЧШИЙ ВАРИАНТ. Бульвар Rizal 3ч+, рынок, экспаты, BI.'} },
+    { id:'siquijor', name:'Siquijor', region:'Siquijor', lat:9.1980, lng:123.5100,
+      ratings:{costOfLiving:8,internet:3,food:5,walkability:6,quiet:9,shopsWalkable:3,beach:8,safety:8,airQuality:9,immigration:3,expatCommunity:4},
+      hazards:{earthquake:4,typhoon:4,flood:3,landslide:2,crime:1,health:3},
+      meta:{rent:'5,000-12,000 PHP',internet:'LTE нестабильный, Starlink $55/мес',bi:'Dumaguete (1ч паром)',ferry:'Dumaguete-Siquijor ~1ч',notes:'Красиво, тихо, но интернет ненадёжный.'} },
+];
+
+// ===================== ISLAND POLYGONS (simplified outlines for IDW masking) =====================
+
+const ISLAND_POLYGONS = {
+    cebu: { name: 'Cebu', coords: [
+        [11.25,124.01],[11.20,123.98],[11.15,123.95],[11.08,123.93],[11.00,123.92],
+        [10.90,123.90],[10.80,123.88],[10.70,123.87],[10.60,123.87],[10.50,123.86],
+        [10.40,123.84],[10.35,123.88],[10.30,123.90],[10.25,123.87],[10.20,123.83],
+        [10.15,123.80],[10.10,123.77],[10.05,123.73],[9.95,123.68],[9.85,123.62],
+        [9.75,123.55],[9.65,123.50],[9.55,123.45],[9.50,123.42],[9.45,123.40],
+        [9.43,123.43],[9.48,123.48],[9.55,123.52],[9.65,123.57],[9.75,123.62],
+        [9.85,123.67],[9.95,123.72],[10.05,123.77],[10.10,123.80],[10.15,123.83],
+        [10.20,123.86],[10.25,123.90],[10.30,123.93],[10.35,123.95],[10.40,123.92],
+        [10.50,123.92],[10.60,123.93],[10.70,123.94],[10.80,123.96],[10.90,123.98],
+        [11.00,124.00],[11.10,124.02],[11.20,124.04],[11.25,124.05],[11.27,124.03],
+    ]},
+    mactan: { name: 'Mactan', coords: [
+        [10.33,123.94],[10.35,123.97],[10.34,124.00],[10.32,124.02],[10.30,124.03],
+        [10.28,124.02],[10.27,123.99],[10.28,123.96],[10.30,123.94],[10.33,123.94],
+    ]},
+    bohol: { name: 'Bohol', coords: [
+        [9.95,124.10],[9.93,123.98],[9.90,123.88],[9.87,123.80],[9.83,123.76],
+        [9.78,123.73],[9.72,123.72],[9.67,123.73],[9.62,123.76],[9.58,123.78],
+        [9.55,123.83],[9.54,123.90],[9.55,123.98],[9.57,124.05],[9.60,124.12],
+        [9.63,124.18],[9.67,124.24],[9.70,124.28],[9.74,124.30],[9.78,124.30],
+        [9.82,124.28],[9.86,124.24],[9.89,124.20],[9.92,124.16],[9.95,124.10],
+    ]},
+    panglao_island: { name: 'Panglao Island', coords: [
+        [9.60,123.78],[9.59,123.74],[9.56,123.72],[9.53,123.74],[9.54,123.78],
+        [9.56,123.82],[9.58,123.83],[9.60,123.81],[9.60,123.78],
+    ]},
+    negros_east: { name: 'Negros Oriental', coords: [
+        [9.80,123.20],[9.70,123.15],[9.60,123.12],[9.50,123.10],[9.40,123.12],
+        [9.30,123.17],[9.20,123.22],[9.15,123.28],[9.12,123.35],[9.15,123.40],
+        [9.20,123.42],[9.25,123.40],[9.30,123.38],[9.40,123.35],[9.50,123.30],
+        [9.60,123.27],[9.70,123.24],[9.80,123.22],[9.80,123.20],
+    ]},
+    siquijor: { name: 'Siquijor', coords: [
+        [9.23,123.47],[9.22,123.51],[9.21,123.55],[9.20,123.58],[9.18,123.58],
+        [9.17,123.55],[9.17,123.50],[9.18,123.47],[9.20,123.45],[9.23,123.47],
+    ]},
+    bantayan: { name: 'Bantayan', coords: [
+        [11.22,123.68],[11.20,123.72],[11.18,123.78],[11.15,123.80],[11.12,123.78],
+        [11.12,123.73],[11.14,123.68],[11.16,123.65],[11.19,123.65],[11.22,123.68],
+    ]},
+    malapascua: { name: 'Malapascua', coords: [
+        [11.34,124.10],[11.33,124.12],[11.32,124.12],[11.31,124.11],[11.32,124.10],[11.34,124.10],
+    ]},
+    camotes: { name: 'Camotes (Pacijan)', coords: [
+        [10.70,124.32],[10.69,124.36],[10.67,124.40],[10.65,124.40],[10.64,124.37],
+        [10.65,124.33],[10.67,124.30],[10.70,124.32],
+    ]},
+};
+
+// ===================== HAZARD EVENT DATA (real historical incidents) =====================
+
+const TYPHOON_EVENTS = [
+  {
+    id: 'haiyan-2013', name: 'Haiyan / Yolanda', date: '2013-11-08',
+    category: 5, maxWind: 315, deaths: 6300,
+    info: 'Сильнейший тайфун при выходе на сушу в истории. Штормовой нагон до 5м в Таклобане. 550,928 домов разрушено.',
+    track: [
+      {lat:11.05,lng:125.73,wind:315,label:'Выход на сушу: Guiuan, Eastern Samar'},
+      {lat:11.25,lng:125.00,wind:295,label:'Tacloban, Leyte'},
+      {lat:11.32,lng:124.40,wind:270,label:'Пересечение Leyte'},
+      {lat:11.25,lng:124.01,wind:250,label:'Daanbantayan, север Себу'},
+      {lat:11.17,lng:123.72,wind:240,label:'Остров Бантаян'},
+      {lat:11.00,lng:123.10,wind:220,label:'Concepcion, Iloilo'},
+    ]
+  },
+  {
+    id: 'rai-2021', name: 'Rai / Odette', date: '2021-12-16',
+    category: 5, maxWind: 260, deaths: 397,
+    info: '9 выходов на сушу, 9.9 млн пострадавших. Масштабные разрушения на Бохоле, Себу, Южном Лейте.',
+    track: [
+      {lat:9.86,lng:126.00,wind:260,label:'Siargao'},
+      {lat:10.03,lng:125.03,wind:240,label:'Liloan, Southern Leyte'},
+      {lat:10.15,lng:124.42,wind:220,label:'Pres. Carlos P. Garcia, Бохол'},
+      {lat:10.09,lng:124.07,wind:210,label:'Bien Unido, Бохол'},
+      {lat:10.11,lng:123.64,wind:195,label:'Каркар, Себу'},
+      {lat:9.95,lng:123.19,wind:180,label:'La Libertad, Негрос'},
+    ]
+  },
+  {
+    id: 'mike-1990', name: 'Mike / Ruping', date: '1990-11-12',
+    category: 4, maxWind: 250, deaths: 748,
+    info: 'Прямой удар по Себу. 88 кораблей затонуло в порту. 90% деревянных домов разрушено. Нагон 3-4м.',
+    track: [
+      {lat:9.85,lng:125.94,wind:250,label:'Dinagat Islands'},
+      {lat:9.93,lng:125.03,wind:240,label:'Southern Leyte'},
+      {lat:10.32,lng:123.89,wind:220,label:'Себу Сити'},
+      {lat:10.17,lng:123.30,wind:200,label:'К Негросу'},
+      {lat:10.60,lng:122.57,wind:180,label:'Guimaras Strait'},
+    ]
+  },
+  {
+    id: 'hagupit-2014', name: 'Hagupit / Ruby', date: '2014-12-06',
+    category: 3, maxWind: 205, deaths: 18,
+    info: 'Медленный тайфун, сильные наводнения. Низкая смертность благодаря урокам Хайяна.',
+    track: [
+      {lat:11.24,lng:125.56,wind:205,label:'Dolores, Eastern Samar'},
+      {lat:11.50,lng:124.95,wind:185,label:'Самар'},
+      {lat:12.13,lng:124.10,wind:150,label:'Масбате'},
+    ]
+  },
+  {
+    id: 'phanfone-2019', name: 'Phanfone / Ursula', date: '2019-12-24',
+    category: 2, maxWind: 175, deaths: 50,
+    info: 'Рождественский тайфун. 7 выходов на сушу. $67.2M ущерба.',
+    track: [
+      {lat:11.25,lng:125.62,wind:175,label:'Salcedo, Eastern Samar'},
+      {lat:11.25,lng:125.00,wind:165,label:'Таклобан'},
+      {lat:11.43,lng:124.56,wind:150,label:'Билиран'},
+      {lat:11.42,lng:123.95,wind:140,label:'Gigantes Islands'},
+      {lat:11.70,lng:122.50,wind:130,label:'Аклан'},
+    ]
+  },
+  {
+    id: 'bopha-2012', name: 'Bopha / Pablo', date: '2012-12-04',
+    category: 5, maxWind: 280, deaths: 1067,
+    info: 'Сильнейший тайфун в Минданао. Селевой поток похоронил New Bataan (566 погибших).',
+    track: [
+      {lat:7.66,lng:126.50,wind:280,label:'Baganga, Davao Oriental'},
+      {lat:7.80,lng:125.70,wind:260,label:'Минданао'},
+      {lat:8.50,lng:124.50,wind:220,label:'Север Минданао'},
+      {lat:9.20,lng:123.50,wind:180,label:'Море Сулу, у Негроса'},
+    ]
+  },
+  {
+    id: 'fengshen-2008', name: 'Fengshen / Frank', date: '2008-06-21',
+    category: 2, maxWind: 165, deaths: 1371,
+    info: 'Паром MV Princess of the Stars перевернулся — 846 из 922 пассажиров погибли.',
+    track: [
+      {lat:11.20,lng:125.50,wind:165,label:'Eastern Samar'},
+      {lat:11.40,lng:124.60,wind:155,label:'Лейте'},
+      {lat:11.50,lng:123.50,wind:140,label:'Себу Стрейт'},
+      {lat:12.30,lng:122.50,wind:130,label:'Море Сибуян (паром)'},
+    ]
+  },
+  {
+    id: 'thelma-1991', name: 'Thelma / Uring', date: '1991-11-05',
+    category: 1, maxWind: 85, deaths: 5081,
+    info: 'Слабый ветер но катастрофические паводки. 580мм осадков за часы. 4,922 погибших в Ормоке.',
+    track: [
+      {lat:10.50,lng:126.50,wind:85,label:'Приближение'},
+      {lat:11.00,lng:125.00,wind:80,label:'Лейте'},
+      {lat:11.04,lng:124.61,wind:75,label:'Ормок (катастрофа)'},
+      {lat:11.20,lng:123.80,wind:70,label:'Себу Стрейт'},
+    ]
+  },
+  {
+    id: 'kalmaegi-2025', name: 'Kalmaegi / Tino', date: '2025-11-04',
+    category: 2, maxWind: 183, deaths: 269,
+    info: 'Худшие паводки в истории Себу. 1.5 месяца осадков за 24ч. 2.4 млн пострадавших.',
+    track: [
+      {lat:9.80,lng:125.50,wind:183,label:'С востока'},
+      {lat:10.00,lng:124.50,wind:175,label:'Южный Лейте'},
+      {lat:10.10,lng:124.00,wind:165,label:'Бохол'},
+      {lat:10.30,lng:123.75,wind:155,label:'Себу (наводнение)'},
+      {lat:10.00,lng:123.20,wind:140,label:'Негрос'},
+    ]
+  },
+  {
+    id: 'washi-2011', name: 'Washi / Sendong', date: '2011-12-16',
+    category: 1, maxWind: 100, deaths: 1292,
+    info: 'Катастрофические паводки в Cagayan de Oro и Iligan. Вода поднялась на 3.3м за час.',
+    track: [
+      {lat:8.00,lng:127.00,wind:100,label:'С востока'},
+      {lat:8.50,lng:125.50,wind:95,label:'Вост. Минданао'},
+      {lat:8.48,lng:124.65,wind:90,label:'Cagayan de Oro'},
+      {lat:8.23,lng:124.24,wind:85,label:'Iligan'},
+    ]
+  },
+];
+
+const FLOOD_EVENTS = [
+  {id:'fl-1',name:'Паводки тайфуна Tino (Себу)',date:'2025-11-04',lat:10.3157,lng:123.8854,deaths:71,affected:500000,severity:10,cause:'Тайфун Kalmaegi/Tino',info:'Худший паводок в истории Себу. Реки Guadalupe, Lahug, Kinalumsan вышли из берегов.'},
+  {id:'fl-2',name:'Великий паводок Ормока',date:'1991-11-05',lat:11.0044,lng:124.6075,deaths:4922,affected:25000,severity:10,cause:'ТШ Thelma/Uring — 580мм за 3 часа',info:'Самое смертоносное наводнение в истории Филиппин на тот момент.'},
+  {id:'fl-3',name:'Тайфун Ruping (Себу)',date:'1990-11-13',lat:10.3157,lng:123.8854,deaths:40,affected:100000,severity:9,cause:'Супертайфун Mike/Ruping',info:'Штормовой нагон 3-4м. 88 судов затонуло в порту Себу.'},
+  {id:'fl-4',name:'TD Crising (Данао)',date:'2017-04-17',lat:10.4700,lng:124.0250,deaths:10,affected:1400,severity:6,cause:'Тропическая депрессия 02W',info:'Внезапные паводки. 200+ семей эвакуированы. Ущерб P84.8M.'},
+  {id:'fl-5',name:'Тайфун Odette (юг Себу)',date:'2021-12-16',lat:10.1110,lng:123.6398,deaths:100,affected:2400000,severity:9,cause:'Супертайфун Rai/Odette',info:'Штормовой нагон до 3м. Каркар, Болхоон, Ослоб разрушены.'},
+  {id:'fl-6',name:'Тайфун Odette (Бохол)',date:'2021-12-16',lat:10.1500,lng:124.0200,deaths:30,affected:400000,severity:8,cause:'Супертайфун Rai/Odette',info:'Два выхода на сушу на Бохоле. Штормовой нагон затопил побережье.'},
+  {id:'fl-7',name:'Паводки Бохол',date:'2008-02-15',lat:9.9300,lng:124.0100,deaths:3,affected:5000,severity:4,cause:'Холодный фронт и конвергенция',info:'Ручьи Pondol и Catagbacan вышли из берегов в Loon.'},
+  {id:'fl-8',name:'Паводки Себу',date:'2022-08-04',lat:10.3157,lng:123.8854,deaths:2,affected:1500,severity:5,cause:'Муссонные дожди',info:'Вода до 1.2м. 25 домов разрушено. Мусор усилил затопление.'},
+  {id:'fl-9',name:'Паводки Негрос',date:'2025-07-17',lat:9.3068,lng:123.3054,deaths:1,affected:8000,severity:5,cause:'Юго-западный муссон',info:'Тысячи эвакуированы. Морское сообщение прервано.'},
+  {id:'fl-10',name:'Паводки Себу',date:'2020-10-13',lat:10.3157,lng:123.8854,deaths:3,affected:2000,severity:5,cause:'Сильные дожди',info:'Внезапное наводнение застало жителей врасплох.'},
+  {id:'fl-11',name:'Штормовой нагон Хайяна (Таклобан)',date:'2013-11-08',lat:11.2494,lng:124.9600,deaths:5000,affected:4100000,severity:10,cause:'Супертайфун Haiyan — нагон 5-7м',info:'Вода поднялась до 2-го этажа зданий. Большинство из 6300 погибших утонули.'},
+  {id:'fl-12',name:'Тайфун Tino (Негрос)',date:'2025-11-04',lat:10.2000,lng:122.9600,deaths:62,affected:150000,severity:8,cause:'Тайфун Kalmaegi/Tino',info:'62 пропавших без вести. Провинция ещё не оправилась от землетрясения сентября 2025.'},
+];
+
+const LANDSLIDE_EVENTS = [
+  {id:'ls-1',name:'Оползень Нага',date:'2018-09-20',lat:10.2090,lng:123.7590,deaths:78,severity:10,cause:'Муссонные дожди + горная добыча',info:'80 гектаров. Известняковая скала обрушилась на рассвете. 77 домов уничтожено.'},
+  {id:'ls-2',name:'Оползень Гинсаугон',date:'2006-02-17',lat:10.2750,lng:125.0050,deaths:1126,severity:10,cause:'10 дней дождей + землетрясение M2.6',info:'Деревня погребена вместе со школой. 8000 пострадавших.'},
+  {id:'ls-3',name:'Оползни землетрясения Бохол',date:'2013-10-15',lat:9.8700,lng:124.0100,deaths:222,severity:9,cause:'Землетрясение M7.2',info:'Оползни на Шоколадных Холмах. 73,000+ зданий повреждено.'},
+  {id:'ls-4',name:'Обвал свалки Бинали',date:'2026-01-08',lat:10.3600,lng:123.9200,deaths:19,severity:7,cause:'Землетрясение 2025 + дожди тайфуна Tino',info:'Мусорный оползень на городской свалке. Кризис утилизации отходов.'},
+  {id:'ls-5',name:'Оползни тайфуна Tino (Себу)',date:'2025-11-04',lat:10.5700,lng:123.9500,deaths:15,severity:7,cause:'Экстремальные осадки тайфуна',info:'Множественные оползни в горах Себу. Дороги перекрыты, посёлки изолированы.'},
+  {id:'ls-6',name:'Оползни тайфуна Odette',date:'2021-12-16',lat:9.9500,lng:123.5900,deaths:8,severity:6,cause:'Супертайфун Rai/Odette',info:'Множественные оползни на юге Себу.'},
+  {id:'ls-7',name:'Оползни тайфуна Haiyan (Лейте)',date:'2013-11-08',lat:11.00,lng:124.90,deaths:50,severity:8,cause:'Супертайфун Haiyan',info:'Горные общины отрезаны от помощи на дни.'},
+  {id:'ls-8',name:'Оползни Негрос',date:'2026-02-02',lat:10.2000,lng:122.9600,deaths:1,severity:3,cause:'ТШ Penha/Basyang',info:'Паводки и оползни в Negros Occidental.'},
+  {id:'ls-9',name:'Оползни Себу-Бохол',date:'2022-08-04',lat:10.30,lng:123.95,deaths:2,severity:4,cause:'Муссонные дожди',info:'10 случаев затоплений. 288 семей пострадали.'},
+];
+
+const CRIME_EVENTS = [
+  {id:'cr-1',type:'theft',name:'Карманные кражи Colon Street',lat:10.2950,lng:123.8990,period:'Постоянно',severity:8,info:'Старейшая улица Филиппин. Воры работают группами. 202 случая за янв-июн 2022. Опасно после темноты.'},
+  {id:'cr-2',type:'theft',name:'Кражи Carbon Market',lat:10.2920,lng:123.8970,period:'Постоянно',severity:8,info:'Крупнейший рынок Себу. Толпы и узкие проходы — рай для карманников.'},
+  {id:'cr-3',type:'drugs',name:'Mango Avenue — наркотики и грабежи',lat:10.3100,lng:123.8930,period:'Постоянно',severity:7,info:'Ночной район. Наркоторговля. Группы детей 7-14 лет обыскивают карманы. Риск после полуночи.'},
+  {id:'cr-4',type:'robbery',name:'Ограбление туристов у Temple of Leah',lat:10.3370,lng:123.8700,period:'2025',severity:6,info:'Двое иностранцев ограблены у туристической достопримечательности в горах Себу.'},
+  {id:'cr-5',type:'murder',name:'Американец застрелен в баре отеля',lat:10.3157,lng:123.8854,period:'2024-03',severity:9,info:'Michael George Richey застрелен местным рэпером у бара отеля. Умер через 2 дня.'},
+  {id:'cr-6',type:'murder',name:'Убийство японо-американца',lat:10.3157,lng:123.8854,period:'2023-11',severity:9,info:'72-летний муж убит. Сообщник жены приехал из Cagayan de Oro.'},
+  {id:'cr-7',type:'scam',name:'ATM скимминг',lat:10.3200,lng:123.9050,period:'Постоянно',severity:5,info:'Турист потерял 40,000 PHP. Устройства на уличных банкоматах считывают PIN.'},
+  {id:'cr-8',type:'scam',name:'Такси-мошенничество у аэропорта',lat:10.3100,lng:123.9800,period:'Постоянно',severity:4,info:'Таксисты отказываются включать счётчик, завышают цены, выбирают длинные маршруты.'},
+  {id:'cr-9',type:'robbery',name:'Ночные грабежи даунтауна',lat:10.2980,lng:123.8960,period:'Постоянно',severity:7,info:'Грабежи в переулках и плохо освещённых районах центра после темноты.'},
+  {id:'cr-10',type:'drugs',name:'Наркотрафик Себу',lat:10.3000,lng:123.9000,period:'2023-2024',severity:7,info:'Изъято шабу на P174.8M в одной операции. Двое арестованы с P8.5M метамфетамина.'},
+  {id:'cr-11',type:'scam',name:'Рейд на онлайн-мошенников',lat:10.3300,lng:123.9100,period:'2022',severity:6,info:'300 граждан КНР арестованы. Нелегальный колл-центр. 150 экстрадированы.'},
+  {id:'cr-12',type:'theft',name:'Fuente Osmeña Circle',lat:10.3080,lng:123.8910,period:'Постоянно',severity:6,info:'Площадь с бездомными. Мелкие кражи, особенно ночью. Рядом ночной район Mango Ave.'},
+  {id:'cr-13',type:'scam',name:'Фейковые бронирования',lat:10.3157,lng:123.8854,period:'2023-2026',severity:5,info:'200+ задокументированных случаев с 2025. Фальшивые отели и туры.'},
+  {id:'cr-14',type:'robbery',name:'Грабежи в прибрежных трущобах',lat:10.2900,lng:123.9050,period:'Постоянно',severity:7,info:'Переулки трущоб у побережья — высокий риск ограбления, особенно для иностранцев после темноты.'},
+];
+
+const HEALTH_EVENTS = [
+  {id:'hl-1',type:'dengue',name:'Эпидемия денге 2024',date:'2024',lat:10.3157,lng:123.8854,cases:15394,deaths:35,severity:8,info:'14 смертей в провинции Себу. Дети 5-10 лет — основная группа риска.'},
+  {id:'hl-2',type:'dengue',name:'Вспышка денге 2022',date:'2022',lat:10.3157,lng:123.8854,cases:11000,deaths:71,severity:9,info:'Провинция Себу: 4,263 случая, 26 смертей. Пик каждые 3 года.'},
+  {id:'hl-3',type:'dengue',name:'Денге 2025',date:'2025',lat:10.3157,lng:123.8854,cases:5880,deaths:10,severity:6,info:'Себу 2,936, Бохол 1,275, Себу Сити 999 случаев.'},
+  {id:'hl-4',type:'measles',name:'Вспышка кори 2019',date:'2019',lat:10.3157,lng:123.8854,cases:737,deaths:8,severity:7,info:'Рост 1,317%. Все 8 погибших — дети. Связано с вакцинофобией после скандала Dengvaxia.'},
+  {id:'hl-5',type:'dengvaxia',name:'Скандал Dengvaxia',date:'2016-2017',lat:10.3157,lng:123.8854,cases:700000,deaths:10,severity:8,info:'Вакцина дана 700,000 детям. Может ухудшить денге у ранее не болевших. Доверие к вакцинам упало с 93% до 32%.'},
+  {id:'hl-6',type:'COVID-19',name:'COVID-19 Себу 2020',date:'2020',lat:10.3157,lng:123.8854,cases:10820,deaths:690,severity:9,info:'Себу — лидер по COVID в Филиппинах. Смертность 6.38%. Месяцы карантина.'},
+  {id:'hl-7',type:'COVID-19',name:'COVID-19 2021-2023',date:'2021-2023',lat:10.3157,lng:123.8854,cases:210549,deaths:6685,severity:10,info:'Кумулятивно по Центральным Висайям. Волны Delta и Omicron.'},
+  {id:'hl-8',type:'leptospirosis',name:'Лептоспироз после тайфуна Tino',date:'2025-11',lat:10.3157,lng:123.8854,cases:117,deaths:7,severity:7,info:'117 случаев за 20 дней после наводнения. Заражённая паводковая вода.'},
+  {id:'hl-9',type:'leptospirosis',name:'Лептоспироз Себу 2025',date:'2025',lat:10.3157,lng:123.8854,cases:93,deaths:17,severity:6,info:'Годовой показатель. Месяцы дождей и паводков. Заражение через воду с отходами животных.'},
+  {id:'hl-10',type:'rabies',name:'Зона риска бешенства',date:'2023-2024',lat:10.3157,lng:123.8854,cases:55,deaths:55,severity:6,info:'Все 55 случаев в Филиппинах за 2023 — летальные. 71% от собак. 250-300 смертей/год по стране.'},
+  {id:'hl-11',type:'food',name:'Отравление лечоном',date:'2022-05',lat:9.9300,lng:124.0100,cases:45,deaths:0,severity:3,info:'8+ случаев отравления испорченным лечоном (жареная свинья) в Центральных Висайях.'},
+  {id:'hl-12',type:'food',name:'Отравление рыбой (общежитие)',date:'2023-06',lat:10.3000,lng:123.8900,cases:28,deaths:0,severity:3,info:'28 жителей общежития госпитализированы после испорченной рыбы.'},
+  {id:'hl-13',type:'cholera',name:'Эндемичная зона холеры',date:'2008-2024',lat:10.00,lng:124.00,cases:3756,deaths:19,severity:5,info:'Холера эндемична. 42,071 случаев за 2008-2013. Плохая санитария в зонах паводков.'},
+];
+
+// ===================== OVERPASS CONFIG =====================
+
+const BBOX = '9.0,123.0,11.5,124.6';
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const CACHE_TTL = 3600000; // 1 hour
+
+const KNOWN_BRANDS = ['sm', 'gaisano', 'robinsons', 'ayala', 'metro', 'savemore', 'puregold', 'mercury', '7-eleven', 'ministop', 'island city mall', 'alturas', 'bq mall', 'lee super plaza', 'citymall'];
+
+const POI_CATEGORIES = {
+    food: {
+        label: 'Рынки / Еда',
+        icon: '🥬',
+        color: '#27ae60',
+        query: `[out:json][timeout:30];(node["amenity"="marketplace"](${BBOX});way["amenity"="marketplace"](${BBOX});node["shop"="supermarket"](${BBOX});way["shop"="supermarket"](${BBOX});node["shop"="greengrocer"](${BBOX});node["shop"="butcher"](${BBOX});node["shop"="seafood"](${BBOX}););out center body;`,
+    },
+    shopsWalkable: {
+        label: 'Моллы / Магазины',
+        icon: '🏪',
+        color: '#3498db',
+        query: `[out:json][timeout:30];(node["shop"="mall"](${BBOX});way["shop"="mall"](${BBOX});relation["shop"="mall"](${BBOX});node["shop"="department_store"](${BBOX});way["shop"="department_store"](${BBOX}););out center body;`,
+    },
+    convenience: {
+        label: 'Convenience stores',
+        icon: '🏬',
+        color: '#e67e22',
+        query: `[out:json][timeout:30];(node["shop"="convenience"](${BBOX}););out body;`,
+        disableClusteringAtZoom: 16,
+    },
+    beach: {
+        label: 'Пляжи',
+        icon: '🏖️',
+        color: '#f0c040',
+        query: `[out:json][timeout:30];(node["natural"="beach"](${BBOX});way["natural"="beach"](${BBOX});node["leisure"="beach_resort"](${BBOX});way["leisure"="beach_resort"](${BBOX}););out center body;`,
+        // Static fallback beaches (OSM coverage is poor in Philippines)
+        staticFallback: [
+            // Moalboal
+            { name:'Panagsama Beach', lat:9.9340, lng:123.3870, importance:'large' },
+            { name:'White Beach Moalboal', lat:9.9230, lng:123.3780, importance:'large' },
+            { name:'Basdaku Beach', lat:9.9280, lng:123.3820, importance:'medium' },
+            // Bantayan
+            { name:'Sugar Beach Bantayan', lat:11.1580, lng:123.7120, importance:'large' },
+            { name:'Paradise Beach Bantayan', lat:11.1700, lng:123.7100, importance:'large' },
+            { name:'Kota Beach Bantayan', lat:11.1630, lng:123.7080, importance:'medium' },
+            // Malapascua
+            { name:'Bounty Beach', lat:11.3260, lng:124.1100, importance:'large' },
+            { name:'Langob Beach', lat:11.3310, lng:124.1040, importance:'medium' },
+            // Camotes
+            { name:'Santiago White Beach', lat:10.6700, lng:124.3600, importance:'large' },
+            { name:'Mangodlong Beach', lat:10.6550, lng:124.3750, importance:'medium' },
+            // Panglao
+            { name:'Alona Beach', lat:9.5540, lng:123.7680, importance:'large' },
+            { name:'Dumaluan Beach', lat:9.5520, lng:123.7510, importance:'large' },
+            { name:'Doljo Beach', lat:9.5890, lng:123.7350, importance:'medium' },
+            { name:'Bikini Beach Panglao', lat:9.5530, lng:123.7600, importance:'medium' },
+            { name:'Danao Beach Panglao', lat:9.5580, lng:123.7780, importance:'medium' },
+            // Anda Bohol
+            { name:'Quinale Beach', lat:9.7350, lng:124.2850, importance:'large' },
+            { name:'Cabagnow Cave Pool', lat:9.7410, lng:124.2730, importance:'medium' },
+            // Oslob
+            { name:'Tumalog Falls Beach', lat:9.4650, lng:123.4350, importance:'medium' },
+            { name:'Sumilon Island Beach', lat:9.4380, lng:123.4850, importance:'large' },
+            // Argao
+            { name:'Mahayahay Beach', lat:9.8780, lng:123.5970, importance:'medium' },
+            // Dumaguete area
+            { name:'Rizal Boulevard Beach', lat:9.3010, lng:123.3020, importance:'medium' },
+            { name:'Dauin Beach', lat:9.1870, lng:123.2680, importance:'large' },
+            { name:'Apo Island Beach', lat:9.0720, lng:123.2700, importance:'large' },
+            { name:'Zamboanguita Beach', lat:9.1020, lng:123.2100, importance:'medium' },
+            { name:'Manjuyod Sandbar', lat:9.4960, lng:123.1580, importance:'large' },
+            // Siquijor
+            { name:'Paliton Beach', lat:9.1850, lng:123.4680, importance:'large' },
+            { name:'Salagdoong Beach', lat:9.2280, lng:123.5750, importance:'large' },
+            { name:'Solangon Beach', lat:9.1740, lng:123.5070, importance:'medium' },
+            { name:'Kagusuan Beach', lat:9.1760, lng:123.4840, importance:'medium' },
+            // Mactan/Cebu
+            { name:'Mactan Newtown Beach', lat:10.3100, lng:123.9700, importance:'medium' },
+            { name:'Shangri-La Beach Mactan', lat:10.2900, lng:124.0030, importance:'large' },
+            { name:'Maribago Beach', lat:10.2820, lng:123.9960, importance:'medium' },
+            { name:'Cordova Beach', lat:10.2600, lng:123.9580, importance:'medium' },
+            // Liloan area
+            { name:'Silot Bay Beach', lat:10.4010, lng:124.0050, importance:'small' },
+        ],
+    },
+    immigration: {
+        label: 'Офисы BI',
+        icon: '🏛️',
+        color: '#8e44ad',
+        static: true,
+        points: [
+            { name: 'BI Cebu Main (J Centre Mall)', lat: 10.3310, lng: 123.9060, importance: 'large' },
+            { name: 'BI Cebu Pier', lat: 10.2970, lng: 123.9020, importance: 'large' },
+            { name: 'BI Tagbilaran', lat: 9.6480, lng: 123.8540, importance: 'large' },
+            { name: 'BI Panglao', lat: 9.5780, lng: 123.7750, importance: 'medium' },
+            { name: 'BI Dumaguete', lat: 9.3055, lng: 123.3040, importance: 'large' },
+        ],
+    },
+    internet: {
+        label: 'Fiber зоны',
+        icon: '📶',
+        color: '#00bcd4',
+        static: true,
+        points: [
+            { name: 'PLDT/Converge Cebu Center', lat: 10.3100, lng: 123.8920, importance: 'large' },
+            { name: 'IT Park Fiber Hub', lat: 10.3290, lng: 123.9050, importance: 'large' },
+            { name: 'Lahug/Banilad Fiber', lat: 10.3400, lng: 123.8970, importance: 'medium' },
+            { name: 'Mandaue Fiber', lat: 10.3330, lng: 123.9320, importance: 'medium' },
+            { name: 'Consolacion Fiber', lat: 10.3770, lng: 123.9600, importance: 'medium' },
+            { name: 'Liloan Fiber', lat: 10.3980, lng: 123.9930, importance: 'medium' },
+            { name: 'Talisay Fiber', lat: 10.2450, lng: 123.8480, importance: 'medium' },
+            { name: 'Minglanilla Fiber', lat: 10.2430, lng: 123.7940, importance: 'small' },
+            { name: 'PLDT Tagbilaran', lat: 9.6490, lng: 123.8530, importance: 'large' },
+            { name: 'Converge Tagbilaran', lat: 9.6510, lng: 123.8560, importance: 'medium' },
+            { name: 'PLDT Dumaguete', lat: 9.3060, lng: 123.3050, importance: 'large' },
+            { name: 'Converge Dumaguete', lat: 9.3080, lng: 123.3070, importance: 'medium' },
+        ],
+    },
+};
+
+// ===================== HAZARD CONFIG =====================
+
+const HAZARD_CATEGORIES = {
+    earthquake: {
+        label: 'Землетрясения', icon: '🌍', color: '#e74c3c',
+        gradient: {0.1:'#fee5d9',0.3:'#fcae91',0.5:'#fb6a4a',0.7:'#de2d26',1.0:'#a50f15'},
+    },
+    volcano: {
+        label: 'Вулканы', icon: '🌋', color: '#ff5722',
+        points: [
+            { name: 'Mount Kanlaon', lat: 10.4124, lng: 123.1320, status: 'Active', elevation: '2435m',
+              dangerRadii: [6000, 14000, 20000] },
+        ],
+        faultLines: [
+            { name: 'Central Cebu Fault', coords: [[11.2,123.85],[10.8,123.82],[10.4,123.80],[10.0,123.70],[9.6,123.55],[9.4,123.45]] },
+            { name: 'East Bohol Fault', coords: [[9.9,124.1],[9.7,124.0],[9.5,123.9],[9.4,123.85]] },
+        ],
+    },
+    typhoon: {
+        label: 'Тайфуны', icon: '🌀', color: '#9b59b6',
+        data: TYPHOON_EVENTS,
+        gradient: {0.1:'#f3e5f5',0.3:'#ce93d8',0.5:'#ab47bc',0.7:'#7b1fa2',1.0:'#4a148c'},
+    },
+    flood: {
+        label: 'Наводнения', icon: '🌊', color: '#3498db',
+        data: FLOOD_EVENTS,
+        gradient: {0.1:'#e3f2fd',0.3:'#90caf9',0.5:'#42a5f5',0.7:'#1565c0',1.0:'#0d47a1'},
+    },
+    landslide: {
+        label: 'Оползни', icon: '⛰️', color: '#795548',
+        data: LANDSLIDE_EVENTS,
+        gradient: {0.1:'#efebe9',0.3:'#bcaaa4',0.5:'#8d6e63',0.7:'#5d4037',1.0:'#3e2723'},
+    },
+    crime: {
+        label: 'Криминал', icon: '🚔', color: '#e91e63',
+        data: CRIME_EVENTS,
+        gradient: {0.1:'#fce4ec',0.3:'#f48fb1',0.5:'#e91e63',0.7:'#c2185b',1.0:'#880e4f'},
+    },
+    health: {
+        label: 'Здоровье', icon: '🏥', color: '#ff9800',
+        data: HEALTH_EVENTS,
+        gradient: {0.1:'#fff3e0',0.3:'#ffcc80',0.5:'#ff9800',0.7:'#e65100',1.0:'#bf360c'},
+    },
+};
+
+const USGS_EARTHQUAKE_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query?' +
+    'format=geojson&minlatitude=8&maxlatitude=12&minlongitude=122&maxlongitude=125' +
+    '&minmagnitude=3&starttime=2014-01-01&orderby=magnitude&limit=500';
+
+// ===================== STATE =====================
+
+let currentWeights = {};
+let ratingMode = 'composite'; // composite or factor key
+let map, markersLayer, radiusCircle;
+let poiClusterGroups = {};  // key -> L.markerClusterGroup
+let poiData = {};           // key -> [{name, lat, lng, importance}]
+let poiVisible = {};        // key -> boolean
+let hazardLayers = {};      // key -> L.layerGroup
+let hazardVisible = {};     // key -> boolean
+let earthquakeData = null;  // cached USGS data
+
+FACTORS.forEach(f => { currentWeights[f.key] = f.defaultWeight; });
+
+// ===================== SCORING =====================
+
+function computeScore(loc) {
+    let sum = 0, maxSum = 0;
+    for (const f of FACTORS) {
+        const w = currentWeights[f.key];
+        sum += loc.ratings[f.key] * w;
+        maxSum += 10 * w;
+    }
+    return maxSum > 0 ? (sum / maxSum) * 100 : 0;
+}
+
+function getScore(loc) {
+    if (ratingMode === 'composite') return computeScore(loc);
+    return (loc.ratings[ratingMode] || 5) * 10;
+}
+
+function scoreToColor(score) {
+    return `hsl(${(score / 100) * 120}, 80%, 45%)`;
+}
+function ratingToColor(r) {
+    if (r <= 3) return '#e94560';
+    if (r <= 6) return '#f5a623';
+    return '#27ae60';
+}
+
+// ===================== OVERPASS API =====================
+
+async function fetchPOICategory(key) {
+    const config = POI_CATEGORIES[key];
+    if (config.static) {
+        poiData[key] = config.points;
+        return config.points;
+    }
+
+    // Check cache
+    const cacheKey = 'overpass_' + key;
+    try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.ts < CACHE_TTL) {
+                poiData[key] = parsed.data;
+                return parsed.data;
+            }
+        }
+    } catch(e) {}
+
+    // Fetch from Overpass
+    let overpassData = [];
+    try {
+        const resp = await fetch(OVERPASS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(config.query),
+        });
+        const json = await resp.json();
+        overpassData = transformOverpass(json.elements || [], key);
+    } catch(e) {
+        console.warn(`Overpass failed for ${key}:`, e);
+    }
+
+    // Merge with static fallback (if any), deduplicating by proximity
+    const merged = mergeWithStatic(overpassData, config.staticFallback || []);
+    poiData[key] = merged;
+
+    try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: merged }));
+    } catch(e) {}
+
+    return merged;
+}
+
+function mergeWithStatic(overpassData, staticData) {
+    if (!staticData || staticData.length === 0) return overpassData;
+    if (overpassData.length === 0) return staticData;
+
+    // Add static points that aren't within 200m of any overpass point
+    const merged = [...overpassData];
+    for (const sp of staticData) {
+        const isDuplicate = overpassData.some(op => {
+            const dlat = sp.lat - op.lat;
+            const dlng = sp.lng - op.lng;
+            return Math.sqrt(dlat*dlat + dlng*dlng) < 0.002; // ~200m
+        });
+        if (!isDuplicate) merged.push(sp);
+    }
+    return merged;
+}
+
+function transformOverpass(elements, categoryKey) {
+    return elements.map(el => {
+        const lat = el.lat || (el.center && el.center.lat);
+        const lng = el.lon || (el.center && el.center.lon);
+        if (!lat || !lng) return null;
+
+        const tags = el.tags || {};
+        const name = tags.name || tags['name:en'] || tags.brand || inferName(tags);
+        const importance = classifyImportance(el, tags);
+
+        return { name, lat, lng, importance };
+    }).filter(Boolean);
+}
+
+function inferName(tags) {
+    if (tags.operator) return tags.operator;
+    const t = tags.shop || tags.amenity || tags.natural || tags.leisure || '';
+    const map = { supermarket:'Supermarket', marketplace:'Market', convenience:'Convenience Store',
+                  mall:'Mall', department_store:'Department Store', beach:'Beach', beach_resort:'Beach Resort',
+                  greengrocer:'Greengrocer', butcher:'Butcher', seafood:'Seafood Shop' };
+    return map[t] || 'POI';
+}
+
+function classifyImportance(el, tags) {
+    const name = (tags.name || '').toLowerCase();
+    const brand = (tags.brand || '').toLowerCase();
+    const hasBrand = KNOWN_BRANDS.some(b => name.includes(b) || brand.includes(b));
+    if (hasBrand || el.type === 'relation') return 'large';
+    if (el.type === 'way' || tags.name) return 'medium';
+    return 'small';
+}
+
+async function fetchAllPOIs() {
+    const status = document.getElementById('poi-status');
+    status.textContent = 'Загрузка POI из OpenStreetMap...';
+    status.className = 'poi-status loading';
+
+    const keys = Object.keys(POI_CATEGORIES);
+    const results = await Promise.allSettled(keys.map(k => fetchPOICategory(k)));
+
+    let total = 0;
+    keys.forEach((k, i) => {
+        const count = poiData[k]?.length || 0;
+        total += count;
+        updateToggleCount(k, count);
+    });
+
+    status.textContent = `Загружено ${total} точек`;
+    status.className = 'poi-status';
+
+    // Render visible categories
+    for (const k of keys) {
+        if (poiVisible[k]) renderPOICluster(k);
+    }
+}
+
+// ===================== POI RENDERING =====================
+
+function createPOIMarker(poi, config) {
+    const sizes = { large: 8, medium: 5, small: 3 };
+    const r = sizes[poi.importance] || 4;
+
+    const marker = L.circleMarker([poi.lat, poi.lng], {
+        radius: r,
+        fillColor: config.color,
+        color: '#fff',
+        weight: 1.5,
+        fillOpacity: 0.85,
+        opacity: 0.9,
+    });
+
+    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}`;
+    const gmapsSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent(poi.name)}/@${poi.lat},${poi.lng},17z`;
+
+    const popupHtml = `
+        <div style="font-family:-apple-system,sans-serif;min-width:180px;">
+            <div style="font-size:13px;font-weight:bold;margin-bottom:4px;color:#1a1a2e;">${poi.name}</div>
+            <div style="font-size:10px;color:#888;margin-bottom:6px;">${poi.lat.toFixed(4)}, ${poi.lng.toFixed(4)}</div>
+            <div style="display:flex;gap:4px;">
+                <a href="${gmapsSearchUrl}" target="_blank" rel="noopener"
+                   style="flex:1;display:block;text-align:center;padding:6px 8px;background:#4285f4;color:white;
+                   border-radius:4px;text-decoration:none;font-size:11px;font-weight:bold;">
+                    📍 Google Maps
+                </a>
+                <a href="https://www.google.com/maps/@${poi.lat},${poi.lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s!2e0!7i16384!8i8192" target="_blank" rel="noopener"
+                   style="flex:1;display:block;text-align:center;padding:6px 8px;background:#34a853;color:white;
+                   border-radius:4px;text-decoration:none;font-size:11px;font-weight:bold;">
+                    🔍 Street View
+                </a>
+            </div>
+        </div>`;
+
+    marker.bindTooltip(`<b>${poi.name}</b>`, { direction: 'top', offset: [0, -4] });
+    marker.bindPopup(popupHtml, { maxWidth: 250 });
+    return marker;
+}
+
+function renderPOICluster(key) {
+    // Remove existing
+    if (poiClusterGroups[key]) {
+        map.removeLayer(poiClusterGroups[key]);
+        delete poiClusterGroups[key];
+    }
+
+    const data = poiData[key];
+    if (!data || data.length === 0) return;
+
+    const config = POI_CATEGORIES[key];
+    const clusterOpts = {
+        maxClusterRadius: 40,
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount();
+            const size = count < 10 ? 28 : count < 50 ? 36 : 44;
+            return L.divIcon({
+                html: `<div class="poi-cluster-icon" style="background:${config.color};width:${size}px;height:${size}px;">${count}</div>`,
+                className: '',
+                iconSize: [size, size],
+            });
+        },
+    };
+    if (config.disableClusteringAtZoom) {
+        clusterOpts.disableClusteringAtZoom = config.disableClusteringAtZoom;
+    }
+
+    const group = L.markerClusterGroup(clusterOpts);
+    for (const poi of data) {
+        group.addLayer(createPOIMarker(poi, config));
+    }
+
+    poiClusterGroups[key] = group;
+    map.addLayer(group);
+}
+
+function removePOICluster(key) {
+    if (poiClusterGroups[key]) {
+        map.removeLayer(poiClusterGroups[key]);
+        delete poiClusterGroups[key];
+    }
+}
+
+// ===================== HAZARD LAYERS =====================
+
+async function fetchEarthquakes() {
+    // Check cache
+    try {
+        const cached = sessionStorage.getItem('usgs_earthquakes');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.ts < CACHE_TTL) {
+                earthquakeData = parsed.data;
+                return parsed.data;
+            }
+        }
+    } catch(e) {}
+
+    try {
+        const resp = await fetch(USGS_EARTHQUAKE_URL);
+        const geojson = await resp.json();
+        earthquakeData = geojson.features || [];
+        try {
+            sessionStorage.setItem('usgs_earthquakes', JSON.stringify({ ts: Date.now(), data: earthquakeData }));
+        } catch(e) {}
+        return earthquakeData;
+    } catch(e) {
+        console.warn('USGS fetch failed:', e);
+        earthquakeData = [];
+        return [];
+    }
+}
+
+function magToColor(mag, alert) {
+    // Sharp contrast: M3-4 grey, M5 yellow, M6 orange, M7+ bright red
+    if (alert === 'red') return '#ff0000';
+    if (alert === 'orange') return '#ff4500';
+    if (mag >= 7) return '#c0392b';
+    if (mag >= 6) return '#e67e22';
+    if (mag >= 5) return '#f1c40f';
+    if (mag >= 4) return '#bdc3c7';
+    return '#95a5a6';
+}
+
+function alertToLabel(alert) {
+    const map = {green:'🟢 Зелёный',yellow:'🟡 Жёлтый',orange:'🟠 Оранжевый',red:'🔴 Красный'};
+    return map[alert] || '';
+}
+
+function renderEarthquakeLayer() {
+    if (hazardLayers.earthquake) {
+        map.removeLayer(hazardLayers.earthquake);
+        delete hazardLayers.earthquake;
+    }
+    if (!earthquakeData || earthquakeData.length === 0) return;
+
+    const group = L.layerGroup();
+
+    // Heatmap layer
+    const heatPoints = earthquakeData.map(f => {
+        const [lng, lat] = f.geometry.coordinates;
+        const mag = f.properties.mag;
+        const intensity = Math.min(1, Math.max(0.1, Math.pow((mag - 2.5) / 5, 1.5)));
+        return [lat, lng, intensity];
+    });
+
+    const heat = L.heatLayer(heatPoints, {
+        radius: 30, blur: 25, maxZoom: 13, max: 1.0,
+        gradient: HAZARD_CATEGORIES.earthquake.gradient,
+    });
+    group.addLayer(heat);
+
+    // Interactive markers — exponential size, sharp color contrast
+    for (const feature of earthquakeData) {
+        const [lng, lat, depth] = feature.geometry.coordinates;
+        const p = feature.properties;
+        const mag = p.mag;
+        const alert = p.alert;
+        const place = p.place || 'Unknown';
+        const time = new Date(p.time).toLocaleDateString();
+        const felt = p.felt;
+        const tsunami = p.tsunami;
+        const mmi = p.mmi;
+
+        const radius = Math.max(3, Math.pow(mag - 2, 1.8));
+        const color = magToColor(mag, alert);
+        const isStrong = mag >= 6.5;
+
+        const marker = L.circleMarker([lat, lng], {
+            radius: radius,
+            fillColor: color,
+            color: isStrong ? '#fff' : 'rgba(255,255,255,0.3)',
+            weight: isStrong ? 2 : 0.5,
+            fillOpacity: isStrong ? 0.85 : 0.5,
+            opacity: isStrong ? 0.9 : 0.5,
+        });
+
+        marker.bindTooltip(`<b>M${mag.toFixed(1)}</b> — ${place}`, { direction: 'top' });
+
+        let popupHtml = `
+            <div style="font-family:-apple-system,sans-serif;min-width:180px;">
+                <div style="font-size:14px;font-weight:bold;color:${color};">🌍 M${mag.toFixed(1)}</div>
+                <div style="font-size:11px;margin:3px 0;">${place}</div>
+                <div style="font-size:10px;color:#888;">Глубина: ${depth.toFixed(0)} км</div>
+                <div style="font-size:10px;color:#888;">Дата: ${time}</div>`;
+        if (alert) popupHtml += `<div style="font-size:10px;margin-top:3px;">PAGER: ${alertToLabel(alert)}</div>`;
+        if (felt) popupHtml += `<div style="font-size:10px;color:#888;">Ощутили: ${felt} чел.</div>`;
+        if (tsunami) popupHtml += `<div style="font-size:10px;color:#e74c3c;font-weight:bold;">⚠️ Угроза цунами</div>`;
+        if (mmi) popupHtml += `<div style="font-size:10px;color:#888;">Интенсивность (MMI): ${mmi.toFixed(1)}</div>`;
+        popupHtml += '</div>';
+
+        marker.bindPopup(popupHtml);
+        group.addLayer(marker);
+    }
+
+    hazardLayers.earthquake = group;
+    map.addLayer(group);
+}
+
+function renderVolcanoLayer() {
+    if (hazardLayers.volcano) {
+        map.removeLayer(hazardLayers.volcano);
+        delete hazardLayers.volcano;
+    }
+
+    const config = HAZARD_CATEGORIES.volcano;
+    const group = L.layerGroup();
+
+    // Volcano markers
+    for (const v of config.points) {
+        // Triangle-like marker using DivIcon
+        const marker = L.marker([v.lat, v.lng], {
+            icon: L.divIcon({
+                html: `<div style="font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,0.5);">🌋</div>`,
+                className: '',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13],
+            }),
+        });
+        marker.bindTooltip(`<b>${v.name}</b> (${v.status})`, { direction: 'top', offset: [0, -12] });
+        marker.bindPopup(`
+            <div style="font-family:-apple-system,sans-serif;">
+                <div style="font-size:14px;font-weight:bold;color:#ff5722;">🌋 ${v.name}</div>
+                <div style="font-size:11px;">Статус: ${v.status}</div>
+                <div style="font-size:11px;">Высота: ${v.elevation}</div>
+                <div style="font-size:10px;color:#888;margin-top:4px;">Красный: PDZ (${v.dangerRadii[0]/1000}км), Оранж: расширенная (${v.dangerRadii[1]/1000}км), Жёлтый: пепел (${v.dangerRadii[2]/1000}км)</div>
+            </div>
+        `);
+        group.addLayer(marker);
+
+        // Danger zone circles
+        const colors = ['#e74c3c', '#ff9800', '#ffc107'];
+        const labels = ['PDZ', 'Extended', 'Ashfall'];
+        v.dangerRadii.forEach((r, i) => {
+            const circle = L.circle([v.lat, v.lng], {
+                radius: r,
+                color: colors[i],
+                fillColor: colors[i],
+                fillOpacity: 0.08,
+                weight: 1.5,
+                dashArray: '6 4',
+            });
+            circle.bindTooltip(`${v.name} — ${labels[i]} zone (${r/1000}км)`, { sticky: true });
+            group.addLayer(circle);
+        });
+    }
+
+    // Fault lines
+    for (const fault of config.faultLines) {
+        const line = L.polyline(fault.coords.map(c => [c[0], c[1]]), {
+            color: '#e74c3c',
+            weight: 2.5,
+            opacity: 0.7,
+            dashArray: '10 6',
+        });
+        line.bindTooltip(`<b>${fault.name}</b>`, { sticky: true });
+        group.addLayer(line);
+    }
+
+    hazardLayers.volcano = group;
+    map.addLayer(group);
+}
+
+// ===================== POINT-BASED HAZARD RENDERERS =====================
+
+function removeHazardLayer(key) {
+    if (hazardLayers[key]) {
+        map.removeLayer(hazardLayers[key]);
+        delete hazardLayers[key];
+    }
+}
+
+// Universal point hazard renderer (floods, landslides, crime, health)
+function renderPointHazardLayer(key) {
+    removeHazardLayer(key);
+    const config = HAZARD_CATEGORIES[key];
+    const events = config.data;
+    if (!events || events.length === 0) return;
+
+    const group = L.layerGroup();
+
+    // Heatmap
+    const heatPoints = events.map(e => {
+        const severity = e.severity || 5;
+        const deathWeight = e.deaths ? Math.min(1, Math.log10(e.deaths + 1) / 4) : 0;
+        const intensity = Math.min(1, Math.max(0.15, severity / 10 * 0.6 + deathWeight * 0.4));
+        return [e.lat, e.lng, intensity];
+    });
+
+    const heat = L.heatLayer(heatPoints, {
+        radius: 35, blur: 28, maxZoom: 13, max: 1.0,
+        gradient: config.gradient,
+    });
+    group.addLayer(heat);
+
+    // Circle markers
+    for (const e of events) {
+        const severity = e.severity || 5;
+        const radius = Math.max(4, severity * 1.2 + (e.deaths ? Math.min(8, Math.log10(e.deaths + 1) * 3) : 0));
+        const isHigh = severity >= 8;
+
+        const marker = L.circleMarker([e.lat, e.lng], {
+            radius: radius,
+            fillColor: config.color,
+            color: isHigh ? '#fff' : 'rgba(255,255,255,0.3)',
+            weight: isHigh ? 2 : 0.5,
+            fillOpacity: isHigh ? 0.85 : 0.55,
+            opacity: isHigh ? 0.9 : 0.5,
+        });
+
+        marker.bindTooltip(`<b>${config.icon} ${e.name}</b>`, { direction: 'top' });
+
+        let popup = `<div style="font-family:-apple-system,sans-serif;min-width:200px;">
+            <div style="font-size:13px;font-weight:bold;color:${config.color};">${config.icon} ${e.name}</div>`;
+        if (e.date || e.period) popup += `<div style="font-size:10px;color:#888;">Дата: ${e.date || e.period}</div>`;
+        if (e.location) popup += `<div style="font-size:10px;color:#888;">📍 ${e.location}</div>`;
+        if (e.deaths) popup += `<div style="font-size:11px;color:#c0392b;font-weight:bold;">☠️ Погибших: ${e.deaths.toLocaleString()}</div>`;
+        if (e.affected) popup += `<div style="font-size:10px;color:#888;">Пострадавших: ${e.affected.toLocaleString()}</div>`;
+        if (e.cases) popup += `<div style="font-size:10px;color:#888;">Случаев: ${e.cases.toLocaleString()}</div>`;
+        if (e.cause) popup += `<div style="font-size:10px;color:#888;">Причина: ${e.cause}</div>`;
+        if (e.type) popup += `<div style="font-size:10px;color:#888;">Тип: ${e.type}</div>`;
+        popup += `<div style="font-size:10px;color:#555;margin-top:4px;">${e.info}</div></div>`;
+
+        marker.bindPopup(popup);
+        group.addLayer(marker);
+    }
+
+    hazardLayers[key] = group;
+    map.addLayer(group);
+}
+
+// Typhoon renderer with tracks + points
+function renderTyphoonLayer() {
+    removeHazardLayer('typhoon');
+    const config = HAZARD_CATEGORIES.typhoon;
+    const events = config.data;
+    if (!events || events.length === 0) return;
+
+    const group = L.layerGroup();
+
+    // Category to color
+    function catColor(cat) {
+        if (cat >= 5) return '#8b0000';
+        if (cat >= 4) return '#cc0000';
+        if (cat >= 3) return '#e67e22';
+        if (cat >= 2) return '#f1c40f';
+        return '#95a5a6';
+    }
+
+    // Heatmap from all track points
+    const heatPoints = [];
+    for (const t of events) {
+        for (const p of t.track) {
+            const intensity = Math.min(1, Math.max(0.15, (p.wind || t.maxWind) / 320));
+            heatPoints.push([p.lat, p.lng, intensity]);
+        }
+    }
+    const heat = L.heatLayer(heatPoints, {
+        radius: 35, blur: 30, maxZoom: 12, max: 1.0,
+        gradient: config.gradient,
+    });
+    group.addLayer(heat);
+
+    // Track lines + points for each typhoon
+    for (const t of events) {
+        const coords = t.track.map(p => [p.lat, p.lng]);
+        const color = catColor(t.category);
+
+        // Track polyline
+        const line = L.polyline(coords, {
+            color: color, weight: 2.5, opacity: 0.7, dashArray: '8 5',
+        });
+        line.bindTooltip(`<b>${config.icon} ${t.name}</b> (Cat ${t.category})`, { sticky: true });
+        group.addLayer(line);
+
+        // Points along track
+        for (const p of t.track) {
+            const wind = p.wind || t.maxWind;
+            const radius = Math.max(3, wind / 40);
+
+            const marker = L.circleMarker([p.lat, p.lng], {
+                radius: radius,
+                fillColor: color,
+                color: t.category >= 4 ? '#fff' : 'rgba(255,255,255,0.3)',
+                weight: t.category >= 4 ? 1.5 : 0.5,
+                fillOpacity: 0.7,
+                opacity: 0.7,
+            });
+
+            marker.bindTooltip(`<b>${t.name}</b> — ${p.label}<br>Ветер: ${wind} км/ч`, { direction: 'top' });
+            marker.bindPopup(`
+                <div style="font-family:-apple-system,sans-serif;min-width:200px;">
+                    <div style="font-size:14px;font-weight:bold;color:${color};">🌀 ${t.name}</div>
+                    <div style="font-size:11px;margin:3px 0;">Категория: ${t.category} | Макс. ветер: ${t.maxWind} км/ч</div>
+                    <div style="font-size:11px;">📍 ${p.label}</div>
+                    <div style="font-size:10px;color:#888;">Дата: ${t.date}</div>
+                    ${t.deaths ? `<div style="font-size:11px;color:#c0392b;font-weight:bold;">☠️ Погибших: ${t.deaths.toLocaleString()}</div>` : ''}
+                    <div style="font-size:10px;color:#555;margin-top:4px;">${t.info}</div>
+                </div>
+            `);
+            group.addLayer(marker);
+        }
+    }
+
+    hazardLayers.typhoon = group;
+    map.addLayer(group);
+}
+
+async function toggleHazardLayer(key, show) {
+    hazardVisible[key] = show;
+
+    if (!show) {
+        removeHazardLayer(key);
+        updateHazardLegend();
+        return;
+    }
+
+    const status = document.getElementById('hazard-status');
+
+    if (key === 'earthquake') {
+        if (!earthquakeData) {
+            status.textContent = 'Загрузка землетрясений (USGS)...';
+            status.className = 'poi-status loading';
+            await fetchEarthquakes();
+            const count = earthquakeData?.length || 0;
+            updateHazardCount('earthquake', count);
+            status.textContent = count > 0 ? `Загружено ${count} землетрясений (M3+, с 2014)` : 'Нет данных USGS';
+            status.className = 'poi-status';
+        }
+        renderEarthquakeLayer();
+    } else if (key === 'volcano') {
+        renderVolcanoLayer();
+    } else if (key === 'typhoon') {
+        renderTyphoonLayer();
+        const count = TYPHOON_EVENTS.length;
+        updateHazardCount('typhoon', count);
+    } else {
+        renderPointHazardLayer(key);
+        const config = HAZARD_CATEGORIES[key];
+        const count = config.data ? config.data.length : 0;
+        updateHazardCount(key, count);
+    }
+
+    updateHazardLegend();
+}
+
+function updateHazardLegend() {
+    const legend = document.getElementById('hazard-legend');
+    const anyVisible = Object.values(hazardVisible).some(v => v);
+    legend.className = anyVisible ? 'hazard-legend visible' : 'hazard-legend';
+}
+
+function renderHazardToggles() {
+    const container = document.getElementById('hazard-toggles');
+    container.innerHTML = '';
+    for (const [key, config] of Object.entries(HAZARD_CATEGORIES)) {
+        hazardVisible[key] = false;
+        const div = document.createElement('div');
+        div.className = 'hazard-toggle';
+        div.innerHTML = `
+            <input type="checkbox" id="hazard-${key}" data-key="${key}">
+            <span class="hazard-color" style="background:${config.color}"></span>
+            <span>${config.icon} ${config.label}</span>
+            <span class="hazard-count" id="hazard-count-${key}"></span>
+        `;
+        div.querySelector('input').addEventListener('change', (e) => {
+            toggleHazardLayer(key, e.target.checked);
+        });
+        container.appendChild(div);
+    }
+}
+
+function updateHazardCount(key, count) {
+    const el = document.getElementById('hazard-count-' + key);
+    if (el) el.textContent = count > 0 ? count : '';
+}
+
+// ===================== MAP =====================
+
+function initMap() {
+    map = L.map('map', { zoomControl: true }).setView([10.1, 123.7], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 18,
+    }).addTo(map);
+
+    radiusCircle = L.circle([10.3157, 123.8854], {
+        radius: 200000, color: '#e94560', fillColor: '#e94560',
+        fillOpacity: 0.03, weight: 1, dashArray: '8 4',
+    }).addTo(map);
+
+    markersLayer = L.layerGroup().addTo(map);
+}
+
+let locationsVisible = true;
+function toggleLocations(show) {
+    locationsVisible = show;
+    if (show) {
+        map.addLayer(markersLayer);
+        map.addLayer(radiusCircle);
+    } else {
+        map.removeLayer(markersLayer);
+        map.removeLayer(radiusCircle);
+    }
+    document.getElementById('location-ui').style.display = show ? '' : 'none';
+}
+
+function renderMarkers() {
+    markersLayer.clearLayers();
+    for (const loc of LOCATIONS) {
+        const score = getScore(loc);
+        const color = scoreToColor(score);
+        const radius = 6 + (score / 100) * 10;
+
+        const marker = L.circleMarker([loc.lat, loc.lng], {
+            radius, fillColor: color, color: '#fff', weight: 2, opacity: 0.9, fillOpacity: 0.85,
+        });
+
+        const label = ratingMode === 'composite' ? 'Score' : (FACTORS.find(f=>f.key===ratingMode)?.label || 'Score');
+        marker.bindTooltip(`<b>${loc.name}</b><br>${label}: ${Math.round(score)}`, { direction: 'top', offset: [0, -8] });
+        marker.bindPopup(createPopupHTML(loc, score), { maxWidth: 320, maxHeight: 420 });
+        marker.addTo(markersLayer);
+        loc._marker = marker;
+        loc._score = score;
+    }
+}
+
+function createPopupHTML(loc, score) {
+    const color = scoreToColor(score);
+    let h = `<div class="loc-popup"><h3>${loc.name}</h3>`;
+    h += `<span class="score-badge" style="background:${color}">${Math.round(score)}/100</span><div style="margin-top:4px">`;
+    for (const f of FACTORS) {
+        const r = loc.ratings[f.key];
+        const hl = ratingMode === f.key ? ' hl' : '';
+        h += `<div class="bar-row${hl}"><span class="bar-icon">${f.icon}</span><span class="bar-label">${f.label}</span>`;
+        h += `<div class="bar-track"><div class="bar-fill" style="width:${r*10}%;background:${ratingToColor(r)}"></div></div>`;
+        h += `<span class="bar-val">${r}</span></div>`;
+    }
+    h += `</div><div class="loc-meta">`;
+    h += `<div><strong>Аренда:</strong> ${loc.meta.rent}</div>`;
+    h += `<div><strong>Интернет:</strong> ${loc.meta.internet}</div>`;
+    h += `<div><strong>BI:</strong> ${loc.meta.bi}</div>`;
+    h += `<div><strong>Из Себу:</strong> ${loc.meta.ferry}</div>`;
+    h += `<div><strong>Заметки:</strong> ${loc.meta.notes}</div>`;
+    const gmUrl = `https://www.google.com/maps/search/${encodeURIComponent(loc.name)}/@${loc.lat},${loc.lng},14z`;
+    h += `<div style="margin-top:6px;"><a href="${gmUrl}" target="_blank" rel="noopener"
+        style="display:block;text-align:center;padding:6px;background:#4285f4;color:white;border-radius:4px;text-decoration:none;font-size:11px;font-weight:bold;">
+        📍 Открыть в Google Maps</a></div>`;
+    h += `</div></div>`;
+    return h;
+}
+
+// ===================== SIDEBAR =====================
+
+function renderPOIToggles() {
+    const container = document.getElementById('poi-toggles');
+    container.innerHTML = '';
+    for (const [key, config] of Object.entries(POI_CATEGORIES)) {
+        poiVisible[key] = false;
+        const div = document.createElement('div');
+        div.className = 'poi-toggle';
+        div.innerHTML = `
+            <input type="checkbox" id="poi-${key}" data-key="${key}">
+            <span class="poi-color" style="background:${config.color}"></span>
+            <span>${config.icon} ${config.label}</span>
+            <span class="poi-count" id="poi-count-${key}">...</span>
+        `;
+        div.querySelector('input').addEventListener('change', (e) => {
+            poiVisible[key] = e.target.checked;
+            if (e.target.checked) {
+                if (poiData[key]) renderPOICluster(key);
+            } else {
+                removePOICluster(key);
+            }
+        });
+        container.appendChild(div);
+    }
+}
+
+function updateToggleCount(key, count) {
+    const el = document.getElementById('poi-count-' + key);
+    if (el) el.textContent = count;
+}
+
+function renderRatingModeSelect() {
+    const select = document.getElementById('rating-mode');
+    let html = '<option value="composite">Все факторы (composite)</option>';
+    for (const f of FACTORS) {
+        html += `<option value="${f.key}">${f.icon} ${f.label}</option>`;
+    }
+    select.innerHTML = html;
+}
+
+function switchRatingMode(mode) {
+    ratingMode = mode;
+    const items = document.querySelectorAll('.slider-item');
+    items.forEach(el => el.classList.toggle('disabled', mode !== 'composite'));
+    document.getElementById('reset-btn').style.opacity = mode !== 'composite' ? '0.3' : '1';
+    document.getElementById('reset-btn').style.pointerEvents = mode !== 'composite' ? 'none' : 'auto';
+    renderMarkers();
+    renderRankings();
+}
+
+function renderSliders() {
+    const container = document.getElementById('sliders');
+    container.innerHTML = '';
+    for (const f of FACTORS) {
+        const div = document.createElement('div');
+        div.className = 'slider-item' + (ratingMode !== 'composite' ? ' disabled' : '');
+        div.innerHTML = `<span class="icon">${f.icon}</span><label>${f.label}</label>
+            <input type="range" min="0" max="5" value="${currentWeights[f.key]}">
+            <span class="wv" id="wv-${f.key}">${currentWeights[f.key]}</span>`;
+        div.querySelector('input').addEventListener('input', (e) => {
+            currentWeights[f.key] = parseInt(e.target.value);
+            document.getElementById(`wv-${f.key}`).textContent = e.target.value;
+            renderMarkers();
+            renderRankings();
+        });
+        container.appendChild(div);
+    }
+}
+
+function renderRankings() {
+    const container = document.getElementById('rankings');
+    const scored = LOCATIONS.map(loc => ({ loc, score: getScore(loc) }));
+    scored.sort((a, b) => b.score - a.score);
+    container.innerHTML = '';
+    scored.forEach((item, i) => {
+        const c = scoreToColor(item.score);
+        const div = document.createElement('div');
+        div.className = 'rank-item';
+        div.innerHTML = `<span class="rank-num">${i+1}.</span><span class="rank-dot" style="background:${c}"></span>
+            <span class="rank-name">${item.loc.name}</span><span class="rank-score" style="color:${c}">${Math.round(item.score)}</span>`;
+        div.addEventListener('click', () => {
+            map.flyTo([item.loc.lat, item.loc.lng], 14, { duration: 1 });
+            setTimeout(() => item.loc._marker?.openPopup(), 1100);
+        });
+        container.appendChild(div);
+    });
+}
+
+function resetWeights() {
+    FACTORS.forEach(f => { currentWeights[f.key] = f.defaultWeight; });
+    renderSliders();
+    renderMarkers();
+    renderRankings();
+}
+
+// ===================== INIT =====================
+
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    renderPOIToggles();
+    renderHazardToggles();
+    renderRatingModeSelect();
+    renderSliders();
+    renderMarkers();
+    renderRankings();
+    fetchAllPOIs();
+});
+</script>
+</body>
+</html>
