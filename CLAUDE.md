@@ -21,7 +21,10 @@ js/data/hazard-config.js — MAP.HAZARD_CATEGORIES (7 volcanoes, 6 fault lines),
 js/scoring.js           — computeScore, getScore, scoreToColor, ratingToColor
 js/overpass.js          — fetchPOICategory, fetchAllPOIs, mergeWithStatic, transformOverpass, getViewportBBox, debouncedRefreshPOIs
 js/poi-render.js        — createPOIMarker, renderPOICluster, removePOICluster
-js/hazard-render.js     — renderEarthquakeLayer, renderVolcanoLayer, renderTyphoonLayer, renderPointHazardLayer, toggleHazardLayer
+js/hazard-render.js     — renderEarthquakeLayer, triggerSeismicWave, toggleHazardLayer, shared utils (haversineDistance, removeHazardLayer)
+js/hazard-volcano.js    — renderVolcanoLayer, triggerEruptionAnimation (ash cloud animation)
+js/hazard-typhoon.js    — renderTyphoonLayer, animateTyphoonPath (moving typhoon with wind field)
+js/hazard-point.js      — renderFloodLayer, renderLandslideLayer, renderCrimeLayer, renderHealthLayer (specialized per-type)
 js/map-init.js          — initMap, renderMarkers, createPopupHTML, toggleLocations
 js/sidebar.js           — renderPOIToggles, renderHazardToggles, renderSliders, renderRankings, switchRatingMode, resetWeights
 js/app.js               — State init, DOMContentLoaded, event listeners, moveend POI refresh

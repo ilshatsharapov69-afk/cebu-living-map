@@ -8,23 +8,63 @@ MAP.renderPOIToggles = function() {
         var key = keys[i];
         var config = MAP.POI_CATEGORIES[key];
         MAP.poiVisible[key] = false;
+        var isPlaceholder = config.placeholder && (!config.points || config.points.length === 0);
         var div = document.createElement('div');
         div.className = 'poi-toggle';
-        div.innerHTML = '<input type="checkbox" id="poi-' + key + '" data-key="' + key + '">' +
+        if (isPlaceholder) div.style.opacity = '0.5';
+        div.innerHTML = '<input type="checkbox" id="poi-' + key + '" data-key="' + key + '"' +
+            (isPlaceholder ? ' disabled' : '') + '>' +
             '<span class="poi-color" style="background:' + config.color + '"></span>' +
-            '<span>' + config.icon + ' ' + config.label + '</span>' +
-            '<span class="poi-count" id="poi-count-' + key + '">...</span>';
+            '<span>' + config.icon + ' ' + config.label + (isPlaceholder ? ' (скоро)' : '') + '</span>' +
+            '<span class="poi-count" id="poi-count-' + key + '">' + (isPlaceholder ? '' : '...') + '</span>';
         div.querySelector('input').addEventListener('change', (function(k) {
             return function(e) {
                 MAP.poiVisible[k] = e.target.checked;
                 if (e.target.checked) {
-                    if (MAP.poiData[k]) MAP.renderPOICluster(k);
+                    if (MAP.poiData[k] && MAP.poiData[k].length > 0) {
+                        MAP.renderPOICluster(k);
+                    } else {
+                        MAP.fetchSinglePOI(k);
+                    }
                 } else {
                     MAP.removePOICluster(k);
                 }
             };
         })(key));
         container.appendChild(div);
+
+        // Quality sub-legend for beaches
+        if (key === 'beach') {
+            var bLegend = document.createElement('div');
+            bLegend.className = 'poi-sub-legend';
+            bLegend.innerHTML =
+                '<span style="color:#5D4037;">● Плохо (1-3)</span> ' +
+                '<span style="color:#AD854B;">● Средне (4-6)</span> ' +
+                '<span style="color:#FFD700;">● Отлично (7-10)</span>';
+            container.appendChild(bLegend);
+        }
+    }
+
+    // Hiking trails toggle (separate from POI system — uses tile overlay + polylines)
+    if (MAP.toggleHikingLayer) {
+        var hikingDiv = document.createElement('div');
+        hikingDiv.className = 'poi-toggle';
+        hikingDiv.innerHTML = '<input type="checkbox" id="poi-hiking">' +
+            '<span class="poi-color" style="background:#f39c12"></span>' +
+            '<span>🥾 Хайкинг тропы</span>';
+        hikingDiv.querySelector('input').addEventListener('change', function(e) {
+            MAP.toggleHikingLayer(e.target.checked);
+        });
+        container.appendChild(hikingDiv);
+
+        // Difficulty sub-legend
+        var hLegend = document.createElement('div');
+        hLegend.className = 'poi-sub-legend';
+        hLegend.innerHTML =
+            '<span style="color:#27ae60;">━ Лёгкий</span> ' +
+            '<span style="color:#f39c12;">━ Средний</span> ' +
+            '<span style="color:#e74c3c;">━ Сложный</span>';
+        container.appendChild(hLegend);
     }
 };
 

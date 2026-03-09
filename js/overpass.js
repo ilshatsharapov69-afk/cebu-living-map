@@ -100,7 +100,14 @@ MAP.transformOverpass = function(elements, categoryKey) {
         var name = tags.name || tags['name:en'] || tags.brand || MAP.inferName(tags);
         var importance = MAP.classifyImportance(el, tags);
 
-        return { name: name, lat: lat, lng: lng, importance: importance };
+        var result = { name: name, lat: lat, lng: lng, importance: importance };
+        if (categoryKey === 'beach') {
+            result.quality = 5;
+            result.sandType = 'mixed';
+            result.crowd = 'medium';
+            result.activities = ['swimming'];
+        }
+        return result;
     }).filter(Boolean);
 };
 
@@ -122,12 +129,31 @@ MAP.classifyImportance = function(el, tags) {
     return 'small';
 };
 
+MAP.fetchSinglePOI = async function(key) {
+    var status = document.getElementById('poi-status');
+    var config = MAP.POI_CATEGORIES[key];
+    status.textContent = 'Загрузка: ' + config.label + '...';
+    status.className = 'poi-status loading';
+
+    await MAP.fetchPOICategory(key);
+    var count = MAP.poiData[key] ? MAP.poiData[key].length : 0;
+    MAP.updateToggleCount(key, count);
+
+    if (MAP.poiVisible[key]) MAP.renderPOICluster(key);
+
+    status.textContent = config.label + ': ' + count + ' точек';
+    status.className = 'poi-status';
+};
+
 MAP.fetchAllPOIs = async function() {
+    var allKeys = Object.keys(MAP.POI_CATEGORIES);
+    var keys = allKeys.filter(function(k) { return MAP.poiVisible[k]; });
+    if (keys.length === 0) return;
+
     var status = document.getElementById('poi-status');
     status.textContent = 'Загрузка POI из OpenStreetMap...';
     status.className = 'poi-status loading';
 
-    var keys = Object.keys(MAP.POI_CATEGORIES);
     await Promise.allSettled(keys.map(function(k) { return MAP.fetchPOICategory(k); }));
 
     var total = 0;
